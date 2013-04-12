@@ -1,7 +1,7 @@
 AC_PREREQ([2.53])
-AC_INIT(rlm_example.c) # change 'example'
+AC_INIT(rlm_couchbase.c)
 AC_REVISION($Revision$)
-AC_DEFUN(modname,[rlm_example]) # change 'example'
+AC_DEFUN(modname,[rlm_couchbase])
 
 if test x$with_[]modname != xno; then
 
@@ -12,12 +12,12 @@ if test x$with_[]modname != xno; then
 	dnl set $fail to what's missing, on fatal errors.
 	dnl use AC_MSG_WARN() on important messages.
 	AC_CHECK_LIB(c, printf,
-		[ example_ldflags="$example_ldflags -lc" ],
+		[ couchbase_ldflags="$couchbase_ldflags -lc" ],
 		[ fail=$fail" printf" ]
 	)
 
 	AC_CHECK_HEADER(stdio.h,
-		[ example_cflags="$example_cflags -I/usr/include" ],
+		[ couchbase_cflags="$couchbase_cflags -I/usr/include" ],
 		[ fail=$fail" stdio.h" ]
 	)
 
@@ -42,10 +42,10 @@ if test x"$fail" != x""; then
 fi
 
 
-AC_SUBST(example_cflags)  # change 'example'
-AC_SUBST(example_ldflags)  # change 'example'
+AC_SUBST(couchbase_cflags)
+AC_SUBST(couchbase_ldflags)
 
-AC_CONFIG_HEADER(config.h)  # delete if you don't want a config.h file.
+AC_CONFIG_HEADER(config.h)
 
 AC_SUBST(targetname)  # keep this!  Don't change!
 AC_OUTPUT(Makefile)  # keep this!  Don't change!

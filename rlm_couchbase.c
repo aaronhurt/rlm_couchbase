@@ -64,7 +64,7 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
     create_options.v.v0.bucket = data->bucket;
 
     /* assign user and password if they were both passed */
-    if (data->user !== NULL && data-pass !== NULL) {
+    if (data->user != NULL || data->pass != NULL) {
         create_options.v.v0.user = data->user;
         create_options.v.v0.passwd = data->pass;
     }
@@ -89,26 +89,44 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
     return 0;
 }
 
-/* handle pre accounting requests */
-static int couchbase_preacct(void *instance, REQUEST *request) {
-    /* just pass this off to the accounting function .... nothing special here */
-    couchbase_accounting(instance, request);
-}
-
 /* write accounting data to couchbase */
 static int couchbase_accounting(void *instance, REQUEST *request) {
-    rlm_couchbase_t *p = instance;
-    char *value_pair;
-    const char *attribute;
+    rlm_couchbase_t *p = instance;      // couchbase instance
+    const char *attribute;              // radius attribute
+    char val[MAX_VALUE_SIZE], key[MAX_KEY_SIZE];
 
+    /* assert packet as not null*/
+    rad_assert(request->packet != NULL);
+
+    /* fetch value pairs from packet */
+    VALUE_PAIR *vp = request->packet->vps;
+
+    /* loop through value pairs */
+    while (vp) {
+        /* get current attribute */
+        attribute = vp->name;
+
+        /* store value */
+        vp_prints_value(val, sizeof(val), vp, 0);
+
+        /* print value */
+        printf("value = %s\n", val);
+
+        /* goto next value pair */
+        vp = vp->next;
+    }
+
+    /* return */
     return RLM_MODULE_OK;
 }
 
 /* free any memory we allocated */
 static int couchbase_detach(void *instance)
 {
-    lcb_destroy(instance->couchbase);
-    free(instance);
+    rlm_couchbase_t *p = instance;
+    lcb_destroy(p->couchbase);
+    free(p);
+
     return 0;
 }
 
@@ -122,7 +140,7 @@ module_t rlm_couchbase = {
     {
         NULL,                   /* authentication */
         NULL,                   /* authorization */
-        couchbase_preacct,      /* preaccounting */
+        NULL,                   /* preaccounting */
         couchbase_accounting,   /* accounting */
         NULL,                   /* checksimul */
         NULL,                   /* pre-proxy */
