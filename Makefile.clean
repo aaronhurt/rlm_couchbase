@@ -1,0 +1,11 @@
+TARGET		= rlm_couchbase
+SRCS		= rlm_couchbase
+HEADERS		= config.h
+RLM_CFLAGS	=
+RLM_LIBS	= 
+
+include ../rules.mak
+
+$(STATIC_OBJS): $(HEADERS)
+
+$(DYNAMIC_OBJS): $(HEADERS)
