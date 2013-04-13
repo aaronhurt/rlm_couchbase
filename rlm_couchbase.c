@@ -4,6 +4,7 @@
 RCSID("$Id$")
 
 #include <freeradius-devel/radiusd.h>
+#include <freeradius-devel/libradius.h>
 #include <freeradius-devel/modules.h>
 #include <freeradius-devel/rad_assert.h>
 
@@ -112,7 +113,8 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     char value[255];                    // radius attribute value
     char key[MAX_KEY_SIZE];             // couchbase document key
     char document[MAX_VALUE_SIZE];      // couchbase document body
-    int keyset = 0;                     // key set toggle
+    char keya[255];                     // first part of document key
+    char keyb[255];                     // second part of document key
     int length;                         // returned value length holder
     int count = 0;                      // value/pair counter
     int remaining;                      // buffer space check
@@ -137,46 +139,58 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         /* get current attribute */
         attribute = vp->name;
 
-        /* check attribute if we haven't yet set a key */
-        if (keyset == 0 && strcmp(attribute, p->dockey) == 0) {
+        /* look for document key attribute */
+        if (strcmp(attribute, p->dockey) == 0) {
             /* get and store our key */
-             vp_prints_value(key, sizeof(key), vp, 0);
-            /* debugging */
-            RDEBUG("key => %s", key);
+             vp_prints_value(keya, sizeof(keya), vp, 0);
         }
-        /* this is not our key ... append to json body */
-        else {
-            /* get and store value */
-            length = vp_prints_value_json(value, sizeof(value), vp);
 
-            /* debugging */
-            RDEBUG("%s => %s", attribute, value);
-
-            /* calculate buffere space remaining */
-            remaining = MAX_VALUE_SIZE - (vptr - document);
-
-            /* check remaining space */
-            if (remaining <= 0) {
-                /* uhh ohh ... we're out of space */
-                remaining = 0;
-                break;
+        /* look for status attribute */
+        if (strcmp(attribute, "Acct-Status-Type") == 0) {
+            ///* get and store status */
+            vp_prints_value(value, sizeof(value), vp, 0);
+            /* clear key */
+            memset(keyb, 0, sizeof(keyb));
+            /* force lower case */
+            int i=0; char *cp = keyb;
+            while (i < strlen(value)) {
+                *cp++ = tolower(value[i]);
+                i++;
             }
-
-            /* add a comma if this is not our first value */
-            if (count > 0) {
-                *vptr++ = ',';
-                remaining--;
-            }
-
-            /* append this attribute/value pair */
-            snprintf(vptr, remaining, "\"%s\":%s", attribute, value);
-
-            /* advance pointer length of value + attribute + 3 for quotes and colon */
-            vptr += length + strlen(attribute) + 3;
-
-            /* increment counter */
-            count++;
+            /* terminate pointer */
+            *cp = '\0';
         }
+
+        /* get and store value */
+        length = vp_prints_value_json(value, sizeof(value), vp);
+
+        /* debugging */
+        RDEBUG("%s => %s", attribute, value);
+
+        /* calculate buffere space remaining */
+        remaining = MAX_VALUE_SIZE - (vptr - document);
+
+        /* check remaining space */
+        if (remaining <= 0) {
+            /* uhh ohh ... we're out of space */
+            remaining = 0;
+            break;
+        }
+
+        /* add a comma if this is not our first value */
+        if (count > 0) {
+            *vptr++ = ',';
+            remaining--;
+        }
+
+        /* append this attribute/value pair */
+        snprintf(vptr, remaining, "\"%s\":%s", attribute, value);
+
+        /* advance pointer length of value + attribute + 3 for quotes and colon */
+        vptr += length + strlen(attribute) + 3;
+
+        /* increment counter */
+        count++;
 
         /* goto next value pair */
         vp = vp->next;
@@ -196,7 +210,12 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         radlog(L_ERR, "rlm_couchbase: Could not close JSON body, insufficient buffer space!");
         /* terminate document */
         document[MAX_VALUE_SIZE-1] = '\0';
+        /* return */
+        return RLM_MODULE_FAIL;
     }
+
+    /* build final key */
+    snprintf(key, sizeof(key), "%s-%s", keya, keyb);
 
     /* debugging */
     RDEBUG("setting '%s' => '%s'", key, document);
