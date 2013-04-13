@@ -150,7 +150,7 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
             length = vp_prints_value_json(value, sizeof(value), vp);
 
             /* debugging */
-            RDEBUG("%s (%1u) => %s", attribute, numeric, value);
+            RDEBUG("%s => %s", attribute, value);
 
             /* calculate buffere space remaining */
             remaining = MAX_VALUE_SIZE - (vptr - document);
