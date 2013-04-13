@@ -137,21 +137,21 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         /* get current attribute */
         attribute = vp->name;
 
-        /* get and store value */
-        length = vp_prints_value(value, sizeof(value), vp, 0);
-
-        /* debugging */
-        RDEBUG("%s == %s", attribute, value);
-
         /* check attribute if we haven't yet set a key */
         if (keyset == 0 && strcmp(attribute, p->dockey) == 0) {
-            /* copy this value to our key */
-            strncpy(key, value, sizeof(value));
+            /* get and store our key */
+             vp_prints_value(key, sizeof(key), vp, 0);
             /* debugging */
-            RDEBUG("document key == %s", key);
+            RDEBUG("key => %s", key);
         }
         /* this is not our key ... append to json body */
         else {
+            /* get and store value */
+            length = vp_prints_value_json(value, sizeof(value), vp);
+
+            /* debugging */
+            RDEBUG("%s => %s", attribute, value);
+
             /* calculate buffere space remaining */
             remaining = MAX_VALUE_SIZE - (vptr - document);
 
@@ -169,10 +169,10 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
             }
 
             /* append this attribute/value pair */
-            snprintf(vptr, remaining, "\"%s\":\"%s\"", attribute, value);
+            snprintf(vptr, remaining, "\"%s\":%s", attribute, value);
 
-            /* advance pointer length of value + attribute + 5 for quotes and colon */
-            vptr += length + strlen(attribute) + 5;
+            /* advance pointer length of value + attribute + 3 for quotes and colon */
+            vptr += length + strlen(attribute) + 3;
 
             /* increment counter */
             count++;
@@ -190,12 +190,12 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         /* close json body */
         *vptr++ = '}';
         /* terminate pointer */
-        *vptr = 0;
+        *vptr = '\0';
     } else {
         /* this isn't good ... no space left to close the body */
         radlog(L_ERR, "rlm_couchbase: Could not close JSON body, insufficient buffer space!");
         /* terminate document */
-        document[MAX_VALUE_SIZE-1] = 0;
+        document[MAX_VALUE_SIZE-1] = '\0';
     }
 
     /* debugging */
