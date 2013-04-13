@@ -1,8 +1,8 @@
 TARGET      = @targetname@
-SRCS        = rlm_couchbase.c
-HEADERS     =
-RLM_CFLAGS  = @couchbase_cflags@ -I/usr/local/include
-RLM_LIBS    = @couchbase_ldflags@ -L/usr/local/lib -lcouchbase
+SRCS        = rlm_couchbase.c callbacks.c
+HEADERS     = callbacks.h
+RLM_CFLAGS  = @couchbase_cflags@
+RLM_LIBS    = @couchbase_ldflags@ -lcouchbase
 
 ## this uses the RLM_CFLAGS and RLM_LIBS and SRCS defs to make TARGET.
 include ../rules.mak

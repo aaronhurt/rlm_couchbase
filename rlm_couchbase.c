@@ -9,8 +9,10 @@ RCSID("$Id$")
 
 #include <libcouchbase/couchbase.h>
 
+#include "callbacks.h"
+
 /* maximum size of a stored value */
-#define MAX_VALUE_SIZE 20971520
+#define MAX_VALUE_SIZE 4096
 
 /* maximum length of a document key */
 #define MAX_KEY_SIZE 250
@@ -27,14 +29,13 @@ typedef struct rlm_couchbase_t {
 
 /* map config to internal variables */
 static const CONF_PARSER module_config[] = {
-    {"key", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, dockey), NULL, "Framed-IP-Address"},
-    {"server", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, host), NULL, "localhost"},
+    {"dockey", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, dockey), NULL, "Acct-Unique-Session-Id"},
+    {"host", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, host), NULL, "localhost"},
     {"bucket", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, bucket), NULL, "default"},
     {"user", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, user), NULL, NULL},
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     { NULL, -1, 0, NULL, NULL }       /* end the list */
 };
-
 
 /* initialize couchbase connection */
 static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
@@ -55,6 +56,10 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
         free(data);
         return -1;
     }
+
+    /* debugging */
+    DEBUG("dockey = %s | host = %s | bucket = %s | user = %s | pass = %s",
+           data->dockey, data->host, data->bucket, data->user, data->pass);
 
     /* allocate couchbase instance creation options */
     memset(&create_options, 0, sizeof(create_options));
@@ -79,6 +84,17 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
         return -1;
     }
 
+    /* set error callback */
+    lcb_set_error_callback(data->couchbase, couchbase_error_callback);
+
+    /* initiate connection */
+    if ((cb_error = lcb_connect(data->couchbase)) != LCB_SUCCESS) {
+        radlog(L_ERR, "rlm_couchbase: Failed to initiate connect: %s", lcb_strerror(NULL, cb_error));
+        lcb_destroy(data->couchbase);
+        free(data);
+        return -1;
+    }
+
     /* run event loop and wait for connection */
     lcb_wait(data->couchbase);
 
@@ -92,8 +108,17 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
 /* write accounting data to couchbase */
 static int couchbase_accounting(void *instance, REQUEST *request) {
     rlm_couchbase_t *p = instance;      // couchbase instance
-    const char *attribute;              // radius attribute
-    char val[MAX_VALUE_SIZE], key[MAX_KEY_SIZE];
+    const char *attribute;              // radius attribute key
+    char value[255];                    // radius attribute value
+    char key[MAX_KEY_SIZE];             // couchbase document key
+    char document[MAX_VALUE_SIZE];      // couchbase document body
+    int keyset = 0;                     // key set toggle
+    int length;                         // returned value length holder
+    int count = 0;                      // value/pair counter
+    int remaining;                      // buffer space check
+    lcb_error_t cb_error;               // couchbase error holder
+    lcb_store_cmd_t cmd;                // couchbase command
+    const lcb_store_cmd_t *commands[1]; // couchbase command set holder
 
     /* assert packet as not null*/
     rad_assert(request->packet != NULL);
@@ -101,19 +126,104 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     /* fetch value pairs from packet */
     VALUE_PAIR *vp = request->packet->vps;
 
+    /* init document */
+    memset(document, 0, sizeof(document));
+
+    /* start json document body */
+    char *vptr = document; *vptr++ = '{';
+
     /* loop through value pairs */
     while (vp) {
         /* get current attribute */
         attribute = vp->name;
 
-        /* store value */
-        vp_prints_value(val, sizeof(val), vp, 0);
+        /* get and store value */
+        length = vp_prints_value(value, sizeof(value), vp, 0);
 
-        /* print value */
-        printf("value = %s\n", val);
+        /* debugging */
+        RDEBUG("%s == %s", attribute, value);
+
+        /* check attribute if we haven't yet set a key */
+        if (keyset == 0 && strcmp(attribute, p->dockey) == 0) {
+            /* copy this value to our key */
+            strncpy(key, value, sizeof(value));
+            /* debugging */
+            RDEBUG("document key == %s", key);
+        }
+        /* this is not our key ... append to json body */
+        else {
+            /* calculate buffere space remaining */
+            remaining = MAX_VALUE_SIZE - (vptr - document);
+
+            /* check remaining space */
+            if (remaining <= 0) {
+                /* uhh ohh ... we're out of space */
+                remaining = 0;
+                break;
+            }
+
+            /* add a comma if this is not our first value */
+            if (count > 0) {
+                *vptr++ = ',';
+                remaining--;
+            }
+
+            /* append this attribute/value pair */
+            snprintf(vptr, remaining, "\"%s\":\"%s\"", attribute, value);
+
+            /* advance pointer length of value + attribute + 5 for quotes and colon */
+            vptr += length + strlen(attribute) + 5;
+
+            /* increment counter */
+            count++;
+        }
 
         /* goto next value pair */
         vp = vp->next;
+    }
+
+    /* calculate buffere space remaining */
+    remaining = MAX_VALUE_SIZE - (vptr - document);
+
+    /* check remaining space */
+    if (remaining > 1) {
+        /* close json body */
+        *vptr++ = '}';
+        /* terminate pointer */
+        *vptr = 0;
+    } else {
+        /* this isn't good ... no space left to close the body */
+        radlog(L_ERR, "rlm_couchbase: Could not close JSON body, insufficient buffer space!");
+        /* terminate document */
+        document[MAX_VALUE_SIZE-1] = 0;
+    }
+
+    /* debugging */
+    RDEBUG("setting '%s' => '%s'", key, document);
+
+    /* setup store callback */
+    lcb_set_store_callback(p->couchbase, couchbase_store_callback);
+
+    /* run the event loop */
+    lcb_wait(p->couchbase);
+
+    /* setup command set for storage operation */
+    commands[0] = &cmd;
+    memset(&cmd, 0, sizeof(cmd));
+
+    /* set commands */
+    cmd.v.v0.operation = LCB_SET;
+    cmd.v.v0.key = key;
+    cmd.v.v0.nkey = strlen(key);
+    cmd.v.v0.bytes = document;
+    cmd.v.v0.nbytes = strlen(document);
+
+    /* store document */
+    cb_error = lcb_store(p->couchbase, NULL, 1, commands);
+
+    /* check return */
+    if (cb_error != LCB_SUCCESS) {
+        radlog(L_ERR, "rlm_couchbase: Failed to store document: %s", lcb_strerror(NULL, cb_error));
     }
 
     /* return */
@@ -123,10 +233,15 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
 /* free any memory we allocated */
 static int couchbase_detach(void *instance)
 {
-    rlm_couchbase_t *p = instance;
+    rlm_couchbase_t *p = instance;  // instance struct
+
+    /* destroy/free couchbase instance */
     lcb_destroy(p->couchbase);
+
+    /* free radius instance struct */
     free(p);
 
+    /* return okay */
     return 0;
 }
 

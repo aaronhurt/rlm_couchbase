@@ -1,0 +1,8 @@
+.DS_*
+.Apple*
+.vimrc
+.*~
+*.cache
+*.o
+*.lo
+*.la

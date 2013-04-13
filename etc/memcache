@@ -1,0 +1,16 @@
+couchbase {
+    ## attribute to use for the document key
+    dockey = "Acct-Unique-Session-Id"
+
+    ## couchbase host
+    host = "cbdb-dav.davidson.tn.ena.net:8091"
+
+    ## couchbase bucket name
+    bucket = "radius"
+
+    ## username for bucket
+    #user = "username"
+
+    ## bucket password
+    #pass = "password"
+}
