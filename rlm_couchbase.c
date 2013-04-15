@@ -113,14 +113,10 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     char value[255];                    // radius attribute value
     char key[MAX_KEY_SIZE];             // couchbase document key
     char document[MAX_VALUE_SIZE];      // couchbase document body
-    char keya[255];                     // first part of document key
-    char keyb[255];                     // second part of document key
     int length;                         // returned value length holder
     int count = 0;                      // value/pair counter
     int remaining;                      // buffer space check
     lcb_error_t cb_error;               // couchbase error holder
-    lcb_store_cmd_t cmd;                // couchbase command
-    const lcb_store_cmd_t *commands[1]; // couchbase command set holder
 
     /* assert packet as not null*/
     rad_assert(request->packet != NULL);
@@ -142,23 +138,42 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         /* look for document key attribute */
         if (strcmp(attribute, p->dockey) == 0) {
             /* get and store our key */
-             vp_prints_value(keya, sizeof(keya), vp, 0);
-        }
+             vp_prints_value(key, sizeof(key), vp, 0);
 
-        /* look for status attribute */
-        if (strcmp(attribute, "Acct-Status-Type") == 0) {
-            ///* get and store status */
-            vp_prints_value(value, sizeof(value), vp, 0);
-            /* clear key */
-            memset(keyb, 0, sizeof(keyb));
-            /* force lower case */
-            int i=0; char *cp = keyb;
-            while (i < strlen(value)) {
-                *cp++ = tolower(value[i]);
-                i++;
+            /* debugging */
+            RDEBUG("found key => '%s'", key);
+
+            /* setup get callback to check for this key in couchbase */
+            lcb_set_get_callback(p->couchbase, couchbase_get_callback);
+
+            /* enter event loop */
+            lcb_wait(p->couchbase);
+
+            /* prevent variable conflicts in local space */
+            {
+                /* init command structs */
+                lcb_get_cmd_t cmd;
+                const lcb_get_cmd_t *commands[1];
+
+                /* setup commands for get operation */
+                commands[0] = &cmd;
+                memset(&cmd, 0 , sizeof(cmd));
+
+                /* populate command struct */
+                cmd.v.v0.key = key;
+                cmd.v.v0.nkey = strlen(key);
+
+                /* get document */
+                cb_error = lcb_get(p->couchbase, NULL, 1, commands);
+
+                /* check return */
+                if (cb_error != LCB_SUCCESS) {
+                    radlog(L_ERR, "rlm_couchbase: Failed to get document (%s): %s", key, lcb_strerror(NULL, cb_error));
+                }
             }
-            /* terminate pointer */
-            *cp = '\0';
+
+            /* run the event loop */
+            lcb_wait(p->couchbase);
         }
 
         /* get and store value */
@@ -214,36 +229,43 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         return RLM_MODULE_FAIL;
     }
 
-    /* build final key */
-    snprintf(key, sizeof(key), "%s-%s", keya, keyb);
-
-    /* debugging */
-    RDEBUG("setting '%s' => '%s'", key, document);
-
     /* setup store callback */
     lcb_set_store_callback(p->couchbase, couchbase_store_callback);
 
     /* run the event loop */
     lcb_wait(p->couchbase);
 
-    /* setup command set for storage operation */
-    commands[0] = &cmd;
-    memset(&cmd, 0, sizeof(cmd));
+    /* prevent variable conflicts in local space */
+    {
+        /* init command structs */
+        lcb_store_cmd_t cmd;
+        const lcb_store_cmd_t *commands[1];
 
-    /* set commands */
-    cmd.v.v0.operation = LCB_SET;
-    cmd.v.v0.key = key;
-    cmd.v.v0.nkey = strlen(key);
-    cmd.v.v0.bytes = document;
-    cmd.v.v0.nbytes = strlen(document);
+        /* setup commands for storage operation */
+        commands[0] = &cmd;
+        memset(&cmd, 0, sizeof(cmd));
 
-    /* store document */
-    cb_error = lcb_store(p->couchbase, NULL, 1, commands);
+        /* set commands */
+        cmd.v.v0.operation = LCB_SET;
+        cmd.v.v0.key = key;
+        cmd.v.v0.nkey = strlen(key);
+        cmd.v.v0.bytes = document;
+        cmd.v.v0.nbytes = strlen(document);
 
-    /* check return */
-    if (cb_error != LCB_SUCCESS) {
-        radlog(L_ERR, "rlm_couchbase: Failed to store document: %s", lcb_strerror(NULL, cb_error));
+        /* debugging */
+        RDEBUG("setting '%s' => '%s'", key, document);
+
+        /* store document */
+        cb_error = lcb_store(p->couchbase, NULL, 1, commands);
+
+        /* check return */
+        if (cb_error != LCB_SUCCESS) {
+            radlog(L_ERR, "rlm_couchbase: Failed to store document (%s): %s", key, lcb_strerror(NULL, cb_error));
+        }
     }
+
+    /* run the event loop */
+    lcb_wait(p->couchbase);
 
     /* return */
     return RLM_MODULE_OK;

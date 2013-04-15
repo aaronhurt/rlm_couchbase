@@ -15,4 +15,5 @@ void couchbase_store_callback(lcb_t instance, const void *cookie, lcb_storage_t 
 void couchbase_get_callback(lcb_t instance, const void *cookie, lcb_error_t error,
     const lcb_get_resp_t *item);
 
+
 #endif /* _CALLBACKS_H */
