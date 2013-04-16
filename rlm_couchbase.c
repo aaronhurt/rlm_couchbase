@@ -118,10 +118,12 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     char value[255];                    // radius attribute value
     char key[MAX_KEY_SIZE];             // couchbase document key
     char document[MAX_VALUE_SIZE];      // couchbase document body
-    int length;                         // returned value length holder
-    int toggle;                         // set toggle
+    int added = 0;                      // attribute added toggle
+    int keyset = 0;                     // document key toggle
+    unsigned int status = 0;            // account status type
     lcb_error_t cb_error;               // couchbase error holder
     json_object *json_out, *json_in;    // json objects
+    enum json_tokener_error json_error = json_tokener_success;  // json parse error
 
     /* assert packet as not null*/
     rad_assert(request->packet != NULL);
@@ -141,9 +143,12 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         attribute = vp->name;
 
         /* look for document key attribute */
-        if (strcmp(attribute, p->dockey) == 0) {
+        if (keyset == 0 && strcmp(attribute, p->dockey) == 0) {
             /* get and store our key */
              vp_prints_value(key, sizeof(key), vp, 0);
+
+            /* toggle key set */
+            keyset = 1;
 
             /* debugging */
             RDEBUG("Found key attribute: '%s' => '%s'", attribute, key);
@@ -188,13 +193,38 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         }
 
         /* get and store value */
-        length = vp_prints_value(value, sizeof(value), vp, 0);
+        vp_prints_value(value, sizeof(value), vp, 0);
 
         /* debugging */
         RDEBUG("%s => %s", attribute, value);
 
-        /* init toggle */
-        toggle = 0;
+        /* check status type */
+        if (strcmp(attribute, "Acct-Status-Type") == 0) {
+            if (strcmp(value, "Start") == 0) {
+                    /* debugging */
+                    RDEBUG("status = start");
+                    /* set status */
+                    status = 1;
+            } else if (strcmp(value, "Stop") == 0) {
+                    /* debugging */
+                    RDEBUG("status = stop");
+                    /* set status */
+                    status = 2;
+            } else if(strcmp(value, "Interim-Update") == 0) {
+                    /* debugging */
+                    RDEBUG("status = update");
+                    /* set status */
+                    status = 3;
+            } else {
+                /* debugging */
+                RDEBUG("other status");
+            }
+            /* skip to next pair */
+            //vp = vp->next; continue;
+        }
+
+        /* init added */
+        added = 0;
 
         /* add this attribute/value pair to our json output */
         if (!vp->flags.has_tag) {
@@ -206,24 +236,24 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
                     if (vp->flags.has_value) break;
                     /* add it as int */
                     json_object_object_add(json_out, attribute, json_object_new_int(vp->vp_integer));
-                    /* set toggle */
-                    toggle = 1;
+                    /* set added */
+                    added = 1;
                 break;
                 case PW_TYPE_SIGNED:
                     /* add it as int */
                     json_object_object_add(json_out, attribute, json_object_new_int(vp->vp_signed));
-                    /* set toggle */
-                    toggle = 1;
+                    /* set added */
+                    added = 1;
                 case PW_TYPE_INTEGER64:
                     /* add it as 64 bit int */
                     json_object_object_add(json_out, attribute, json_object_new_int64(vp->vp_integer64));
-                    /* set toggle */
-                    toggle = 1;
+                    /* set added */
+                    added = 1;
                 break;
             }
         }
         /* keep going if not set above */
-        if (toggle != 1) {
+        if (added != 1) {
             switch (vp->type) {
                 case PW_TYPE_STRING:
                     /* use string value */
@@ -242,7 +272,29 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     /* check for found document */
     if (p->cookie != '\0') {
         /* debugging */
-        RDEBUG("in accounting - p->cookie == %s", p->cookie);
+        RDEBUG("p->cookie == %s", p->cookie);
+        /* parse json body from couchbase */
+        json_in = json_tokener_parse_verbose(p->cookie, &json_error);
+        /* check error */
+        if (json_error == json_tokener_success) {
+            /* debugging */
+            RDEBUG("parsed body == %s", json_object_to_json_string(json_in));
+            /* switch on message type */
+            switch(status) {
+                case 1:
+                    /* handle start */
+                break;
+                case 2:
+                    /* handle stop */
+                break;
+                case 3:
+                    /* handle update */
+                break;
+            }
+        } else {
+            /* debugging */
+            RDEBUG("Failed to parse couchbase document: %s", json_tokener_error_desc(json_error));
+        }
     }
 
     /* make sure we have enough room in our document buffer */
