@@ -120,19 +120,30 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     char document[MAX_VALUE_SIZE];      // couchbase document body
     int added = 0;                      // attribute added toggle
     int keyset = 0;                     // document key toggle
-    unsigned int status = 0;            // account status type
+    int status = 0;                     // account status type
     lcb_error_t cb_error;               // couchbase error holder
     json_object *json_out, *json_in;    // json objects
     enum json_tokener_error json_error = json_tokener_success;  // json parse error
+    VALUE_PAIR *vp;                     // radius value pair linked list
 
     /* assert packet as not null*/
     rad_assert(request->packet != NULL);
 
-    /* fetch value pairs from packet */
-    VALUE_PAIR *vp = request->packet->vps;
+    /* sanity check */
+    if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE, 0)) != NULL) {
+        /* set status */
+        status = vp->vp_integer;
+        /* debugging */
+        RDEBUG("status == %d", status);
+    } else {
+        /* log error */
+        radlog(L_ERR, "rlm_couchbase: Could not find status type in packet.");
+        /* return */
+        return RLM_MODULE_INVALID;
+    }
 
-    /* init document */
-    memset(document, 0, sizeof(document));
+    /* fetch value pairs from packet */
+    vp = request->packet->vps;
 
     /* start json output document */
     json_out = json_object_new_object();
@@ -198,31 +209,6 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         /* debugging */
         RDEBUG("%s => %s", attribute, value);
 
-        /* check status type */
-        if (strcmp(attribute, "Acct-Status-Type") == 0) {
-            if (strcmp(value, "Start") == 0) {
-                    /* debugging */
-                    RDEBUG("status = start");
-                    /* set status */
-                    status = 1;
-            } else if (strcmp(value, "Stop") == 0) {
-                    /* debugging */
-                    RDEBUG("status = stop");
-                    /* set status */
-                    status = 2;
-            } else if(strcmp(value, "Interim-Update") == 0) {
-                    /* debugging */
-                    RDEBUG("status = update");
-                    /* set status */
-                    status = 3;
-            } else {
-                /* debugging */
-                RDEBUG("other status");
-            }
-            /* skip to next pair */
-            //vp = vp->next; continue;
-        }
-
         /* init added */
         added = 0;
 
@@ -279,16 +265,22 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         if (json_error == json_tokener_success) {
             /* debugging */
             RDEBUG("parsed body == %s", json_object_to_json_string(json_in));
-            /* switch on message type */
-            switch(status) {
-                case 1:
+            /* switch on status type */
+            switch (status) {
+                case PW_STATUS_START:
                     /* handle start */
                 break;
-                case 2:
+                case PW_STATUS_STOP:
                     /* handle stop */
                 break;
-                case 3:
+                case PW_STATUS_ALIVE:
                     /* handle update */
+                break;
+                case PW_STATUS_ACCOUNTING_ON:
+                    /* handle on */
+                break;
+                case PW_STATUS_ACCOUNTING_OFF:
+                    /* handle off */
                 break;
             }
         } else {
