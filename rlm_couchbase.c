@@ -10,6 +10,8 @@ RCSID("$Id$")
 
 #include <libcouchbase/couchbase.h>
 
+#include <json/json.h>
+
 #include "callbacks.h"
 
 /* maximum size of a stored value */
@@ -117,9 +119,8 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     char key[MAX_KEY_SIZE];             // couchbase document key
     char document[MAX_VALUE_SIZE];      // couchbase document body
     int length;                         // returned value length holder
-    int count = 0;                      // value/pair counter
-    int remaining;                      // buffer space check
     lcb_error_t cb_error;               // couchbase error holder
+    json_object *json_out, *json_in;    // json objects
 
     /* assert packet as not null*/
     rad_assert(request->packet != NULL);
@@ -130,8 +131,8 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     /* init document */
     memset(document, 0, sizeof(document));
 
-    /* start json document body */
-    char *vptr = document; *vptr++ = '{';
+    /* start json output document */
+    json_out = json_object_new_object();
 
     /* loop through value pairs */
     while (vp) {
@@ -186,37 +187,33 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         }
 
         /* get and store value */
-        length = vp_prints_value_json(value, sizeof(value), vp);
+        length = vp_prints_value(value, sizeof(value), vp, 0);
 
         /* debugging */
         RDEBUG("%s => %s", attribute, value);
 
-        /* calculate buffere space remaining */
-        remaining = MAX_VALUE_SIZE - (vptr - document);
-
-        /* check remaining space */
-        if (remaining <= 0) {
-            /* uhh ohh ... we're out of space */
-            remaining = 0;
+        /* add this attribute/value pair to our json output */
+        switch (vp->type) {
+            case PW_TYPE_INTEGER:
+            case PW_TYPE_BYTE:
+            case PW_TYPE_SHORT:
+            case PW_TYPE_SIGNED:
+            case PW_TYPE_OCTETS:
+            case PW_TYPE_IPV6PREFIX:
+                /* add it as an int */
+                json_object_object_add(json_out, attribute, json_object_new_int(atoi(value)));
+            break;
+            case PW_TYPE_INTEGER64:
+                /* add a long int */
+                json_object_object_add(json_out, attribute, json_object_new_int64(atol(value)));
+            break;
+            default:
+                /* it must be a string */
+                json_object_object_add(json_out, attribute, json_object_new_string(value));
             break;
         }
 
-        /* add a comma if this is not our first value */
-        if (count > 0) {
-            *vptr++ = ',';
-            remaining--;
-        }
-
-        /* append this attribute/value pair */
-        snprintf(vptr, remaining, "\"%s\":%s", attribute, value);
-
-        /* advance pointer length of value + attribute + 3 for quotes and colon */
-        vptr += length + strlen(attribute) + 3;
-
-        /* increment counter */
-        count++;
-
-        /* goto next value pair */
+        /* goto next pair */
         vp = vp->next;
     }
 
@@ -226,22 +223,16 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         RDEBUG("in accounting - p->cookie == %s", p->cookie);
     }
 
-    /* calculate buffere space remaining */
-    remaining = MAX_VALUE_SIZE - (vptr - document);
-
-    /* check remaining space */
-    if (remaining > 1) {
-        /* close json body */
-        *vptr++ = '}';
-        /* terminate pointer */
-        *vptr = '\0';
-    } else {
-        /* this isn't good ... no space left to close the body */
-        radlog(L_ERR, "rlm_couchbase: Could not close JSON body, insufficient buffer space!");
-        /* terminate document */
-        document[MAX_VALUE_SIZE-1] = '\0';
+    /* make sure we have enough room in our document buffer */
+    if (json_object_get_string_len(json_out) > sizeof(document) - 1) {
+        /* this isn't good */
+        radlog(L_ERR, "rlm_couchbase: Could not write json document.  Insufficient buffer space!");
+        /* free json_out */
+        json_object_put(json_out);
         /* return */
         return RLM_MODULE_FAIL;
+    } else {
+        strncpy(document, json_object_to_json_string(json_out), sizeof(document));
     }
 
     /* setup store callback */

@@ -1,6 +1,5 @@
 couchbase {
     ## attribute to use for the document key
-    ## the Acct-Status-Type value will be appended
     dockey = "Acct-Unique-Session-Id"
 
     ## couchbase host
