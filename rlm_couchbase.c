@@ -119,6 +119,7 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     char key[MAX_KEY_SIZE];             // couchbase document key
     char document[MAX_VALUE_SIZE];      // couchbase document body
     int length;                         // returned value length holder
+    int toggle;                         // set toggle
     lcb_error_t cb_error;               // couchbase error holder
     json_object *json_out, *json_in;    // json objects
 
@@ -192,25 +193,46 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         /* debugging */
         RDEBUG("%s => %s", attribute, value);
 
+        /* init toggle */
+        toggle = 0;
+
         /* add this attribute/value pair to our json output */
-        switch (vp->type) {
-            case PW_TYPE_INTEGER:
-            case PW_TYPE_BYTE:
-            case PW_TYPE_SHORT:
-            case PW_TYPE_SIGNED:
-            case PW_TYPE_OCTETS:
-            case PW_TYPE_IPV6PREFIX:
-                /* add it as an int */
-                json_object_object_add(json_out, attribute, json_object_new_int(atoi(value)));
-            break;
-            case PW_TYPE_INTEGER64:
-                /* add a long int */
-                json_object_object_add(json_out, attribute, json_object_new_int64(atol(value)));
-            break;
-            default:
-                /* it must be a string */
-                json_object_object_add(json_out, attribute, json_object_new_string(value));
-            break;
+        if (!vp->flags.has_tag) {
+            switch (vp->type) {
+                case PW_TYPE_INTEGER:
+                case PW_TYPE_BYTE:
+                case PW_TYPE_SHORT:
+                    /* skip if we have flags */
+                    if (vp->flags.has_value) break;
+                    /* add it as int */
+                    json_object_object_add(json_out, attribute, json_object_new_int(vp->vp_integer));
+                    /* set toggle */
+                    toggle = 1;
+                break;
+                case PW_TYPE_SIGNED:
+                    /* add it as int */
+                    json_object_object_add(json_out, attribute, json_object_new_int(vp->vp_signed));
+                    /* set toggle */
+                    toggle = 1;
+                case PW_TYPE_INTEGER64:
+                    /* add it as 64 bit int */
+                    json_object_object_add(json_out, attribute, json_object_new_int64(vp->vp_integer64));
+                    /* set toggle */
+                    toggle = 1;
+                break;
+            }
+        }
+        /* keep going if not set above */
+        if (toggle != 1) {
+            switch (vp->type) {
+                case PW_TYPE_STRING:
+                    /* use string value */
+                    json_object_object_add(json_out, attribute, json_object_new_string(vp->vp_strvalue));
+                default:
+                    /* use vp_prints_value return */
+                    json_object_object_add(json_out, attribute, json_object_new_string(value));
+                break;
+            }
         }
 
         /* goto next pair */
