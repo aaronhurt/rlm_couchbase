@@ -25,6 +25,7 @@ typedef struct rlm_couchbase_t {
     char *bucket;
     char *user;
     char *pass;
+    void *cookie;
     lcb_t couchbase;
 } rlm_couchbase_t;
 
@@ -49,6 +50,8 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
     if (!data) {
         return -1;
     }
+
+    /* clear data */
     memset(data, 0, sizeof(*data));
 
     /* fail on bad config */
@@ -141,7 +144,7 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
              vp_prints_value(key, sizeof(key), vp, 0);
 
             /* debugging */
-            RDEBUG("found key => '%s'", key);
+            RDEBUG("Found key attribute: '%s' => '%s'", attribute, key);
 
             /* setup get callback to check for this key in couchbase */
             lcb_set_get_callback(p->couchbase, couchbase_get_callback);
@@ -167,8 +170,14 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
                 cb_error = lcb_get(p->couchbase, NULL, 1, commands);
 
                 /* check return */
-                if (cb_error != LCB_SUCCESS) {
-                    radlog(L_ERR, "rlm_couchbase: Failed to get document (%s): %s", key, lcb_strerror(NULL, cb_error));
+                if (cb_error == LCB_SUCCESS) {
+                    /* get cookie */
+                    p->cookie = lcb_get_cookie(p->couchbase);
+                } else {
+                    /* debuggimg */
+                    RDEBUG("Failed to get document (%s): %s", key, lcb_strerror(NULL, cb_error));
+                    /* null cooike */
+                    p->cookie = '\0';
                 }
             }
 
@@ -209,6 +218,12 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
 
         /* goto next value pair */
         vp = vp->next;
+    }
+
+    /* check for found document */
+    if (p->cookie != '\0') {
+        /* debugging */
+        RDEBUG("in accounting - p->cookie == %s", p->cookie);
     }
 
     /* calculate buffere space remaining */
@@ -279,7 +294,10 @@ static int couchbase_detach(void *instance)
     /* destroy/free couchbase instance */
     lcb_destroy(p->couchbase);
 
-    /* free radius instance struct */
+    /* free cookie */
+    free(p->cookie);
+
+    /* free radius instance */
     free(p);
 
     /* return okay */

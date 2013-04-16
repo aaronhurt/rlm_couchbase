@@ -6,3 +6,5 @@
 *.o
 *.lo
 *.la
+config.log
+config.status
