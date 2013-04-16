@@ -232,7 +232,10 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         /* return */
         return RLM_MODULE_FAIL;
     } else {
+        /* copy json string to document */
         strncpy(document, json_object_to_json_string(json_out), sizeof(document));
+        /* free json object */
+        json_object_put(json_out);
     }
 
     /* setup store callback */
