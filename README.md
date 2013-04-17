@@ -33,7 +33,7 @@ To Use
 ------
 
 Pull freeradius release_3_0_0_beta0 and checkout this module under src/modules.  Then enable and compile as usual.
-You will need libcouchbase >= 2.0 installed with a valid libio module.
+You will need libcouchbase >= 2.0 installed with a valid libio module.  You will also need the json-c library installed and available.
 
 Configuration
 -------------
