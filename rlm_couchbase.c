@@ -57,10 +57,6 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
         return -1;
     }
 
-    /* debugging */
-    DEBUG("dockey = %s | host = %s | bucket = %s | user = %s | pass = %s",
-           data->dockey, data->host, data->bucket, data->user, data->pass);
-
     /* allocate couchbase instance creation options */
     memset(&create_options, 0, sizeof(create_options));
 
@@ -200,7 +196,7 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         vp_prints_value(key, sizeof(key), vp, 0);
 
         /* debugging */
-        RDEBUG("Found key: '%s' => '%s'", vp->name, key);
+        RDEBUG("found document key: '%s' => '%s'", vp->name, key);
 
         /* prevent variable conflicts in local space */
         {
@@ -224,24 +220,20 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
 
             /* check return */
             if (cb_error != LCB_SUCCESS) {
-                 /* debuggimg */
-                RDEBUG("Failed to get document (%s): %s", key, lcb_strerror(NULL, cb_error));
+                 /* debugging ... not a real error as document may not exist */
+                RDEBUG("failed to get document (%s): %s", key, lcb_strerror(NULL, cb_error));
             } else {
                 /* check for valid pointer */
                 if (p->cookie[0] != '\0') {
-                    /* debugging */
-                    RDEBUG("p->cookie == %s", p->cookie);
                     /* parse json body from couchbase */
                     json = json_tokener_parse_verbose(p->cookie, &json_error);
                     /* check error */
                     if (json_error == json_tokener_success) {
-                        /* debugging */
-                        RDEBUG("parsed body == %s", json_object_to_json_string(json));
                         /* set doc found */
                         docfound = 1;
                     } else {
-                        /* debugging */
-                        RDEBUG("Failed to parse couchbase document: %s", json_tokener_error_desc(json_error));
+                        /* log error */
+                        radlog(L_ERR, "rlm_couchbase: Failed to parse couchbase document: %s", json_tokener_error_desc(json_error));
                         /* cleanup json object */
                         json_object_put(json);
                     }
@@ -415,7 +407,7 @@ static int couchbase_detach(void *instance)
     /* destroy/free couchbase instance */
     lcb_destroy(p->couchbase);
 
-    /* free cookie */
+    /* free couchbase cookie */
     free(p->cookie);
 
     /* free radius instance */
