@@ -14,9 +14,7 @@ void couchbase_error_callback(lcb_t instance, lcb_error_t error, const char *err
 
 /* couchbase value store callback */
 void couchbase_store_callback(lcb_t instance, const void *cookie, lcb_storage_t operation, lcb_error_t error, const lcb_store_resp_t *resp) {
-    if (error == LCB_SUCCESS) {
-        DEBUG("KEY STORED");
-    } else {
+    if (error != LCB_SUCCESS) {
         DEBUG("STORE ERROR: %s (0x%x)", lcb_strerror(instance, error), error);
     }
     /* silent compiler */
@@ -27,23 +25,21 @@ void couchbase_store_callback(lcb_t instance, const void *cookie, lcb_storage_t 
 
 /* couchbase value get callback */
 void couchbase_get_callback(lcb_t instance, const void *cookie, lcb_error_t error, const lcb_get_resp_t *resp) {
+    /* clear cookie */
+    memset((char *) cookie, 0, MAX_VALUE_SIZE);
+    /* check error */
     if (error == LCB_SUCCESS) {
-        void *document = cookie;    // document body
+        /* check that we have enoug space in buffer */
+        if (resp->v.v0.nbytes > MAX_VALUE_SIZE -1) {
+            /* debugging */
+            DEBUG("ERROR: Returned document too large for cookie buffer!");
+        } else {
+            /* store document data */ 
+            strncpy((char *) cookie, resp->v.v0.bytes, resp->v.v0.nbytes);
 
-        /* allocate document body */
-        document = rad_malloc(resp->v.v0.nbytes +1);
-
-        /* zero document */
-        memset(document, 0, resp->v.v0.nbytes +1);
-
-        /* store document data */
-        strncpy((char *) document, resp->v.v0.bytes, resp->v.v0.nbytes);
-
-        /* debugging */
-        DEBUG("GOT DATA: %s", (char *) document);
-
-        /* assign cookie */
-        lcb_set_cookie(instance, document);
+            /* debugging */
+            DEBUG("GOT DATA: %s", (char *) cookie);
+        }
     } else {
         DEBUG("GET ERROR: %s (0x%x)", lcb_strerror(instance, error), error);
     }

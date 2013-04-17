@@ -1,6 +1,6 @@
 couchbase {
     ## attribute to use for the document key
-    dockey = "Acct-Unique-Session-Id"
+    dockey = "Acct-Session-Id"
 
     ## couchbase host
     host = "cbdb-host.com:8091"

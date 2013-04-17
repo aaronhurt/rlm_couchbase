@@ -6,6 +6,12 @@
 #include <freeradius-devel/ident.h>
 RCSIDH(callbacks_h, "$Id$")
 
+/* maximum size of a stored value */
+#define MAX_VALUE_SIZE 4096
+
+/* maximum length of a document key */
+#define MAX_KEY_SIZE 250
+
 /* define functions */
 void couchbase_error_callback(lcb_t instance, lcb_error_t error, const char *errinfo);
 
