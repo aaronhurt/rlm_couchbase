@@ -250,6 +250,9 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     /* start json document if needed */
     if (docfound != 1) {
         json = json_object_new_object();
+        /* initialize start and stop times ... ensure we always have these elements */
+        json_object_object_add(json, "startTimestamp", json_object_new_int(0));
+        json_object_object_add(json, "stopTimestamp", json_object_new_int(0));
     }
 
     /* status specific replacements */

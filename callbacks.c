@@ -26,7 +26,7 @@ void couchbase_store_callback(lcb_t instance, const void *cookie, lcb_storage_t 
 /* couchbase value get callback */
 void couchbase_get_callback(lcb_t instance, const void *cookie, lcb_error_t error, const lcb_get_resp_t *resp) {
     /* clear cookie */
-    memset((char *) cookie, 0, MAX_VALUE_SIZE);
+    memset((char *)cookie, 0, MAX_VALUE_SIZE);
     /* check error */
     if (error == LCB_SUCCESS) {
         /* check that we have enoug space in buffer */
