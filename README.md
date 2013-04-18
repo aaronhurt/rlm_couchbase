@@ -40,14 +40,17 @@ Configuration
 
     couchbase {
         ## attribute to use for the document key
-        dockey = "Acct-Unique-Session-Id"
+        key = "Acct-Session-Id"
 
         ## couchbase host
-        host = "cbdb-host.com:8091"
+        host = "cb-server.domain.com:8091"
 
         ## couchbase bucket name
         bucket = "radius"
 
+        ## document expire time in seconds (0 = never)
+        expire = 2592000
+    
         ## username for bucket
         #user = "username"
 
@@ -58,4 +61,5 @@ Configuration
 Disclaimer
 ----------
 
-This module was written for a specific use case to collect data from thousands of wireless access points.  YMMV.
+This module was tested to handle thousands of radius requests in a short period of time from multiple (hundreds) of Aerohive Access Points pointing
+to a freeradius installation for accounting.  YMMV.
