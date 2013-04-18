@@ -1,12 +1,15 @@
 couchbase {
     ## attribute to use for the document key
-    dockey = "Acct-Session-Id"
+    key = "Acct-Session-Id"
 
     ## couchbase host
     host = "cbdb-host.com:8091"
 
     ## couchbase bucket name
     bucket = "radius"
+
+    ## document expire time in seconds (0 = never)
+    expire = 2592000
 
     ## username for bucket
     #user = "username"
