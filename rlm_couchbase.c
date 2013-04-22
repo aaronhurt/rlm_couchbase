@@ -1,5 +1,7 @@
 /* junk */
 
+#include <ctype.h>
+
 #include <freeradius-devel/ident.h>
 RCSID("$Id$")
 
@@ -22,6 +24,8 @@ typedef struct rlm_couchbase_t {
     char *user;             /* couchbase bucket user name */
     char *pass;             /* couchbase bucket password */
     unsigned int expire;    /* document expire time in seconds */
+    char *map;              /* user defined attribute map */
+    char *ignore;           /* user defined list of ignored attributes */
     char *cb_cookie;        /* buffer to hold documents returned from couchbase */
     lcb_t cb_instance;      /* couchbase connection instance */
 } rlm_couchbase_t;
@@ -34,6 +38,8 @@ static const CONF_PARSER module_config[] = {
     {"user", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, user), NULL, NULL},
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     {"expire", PW_TYPE_INTEGER, offsetof(rlm_couchbase_t, expire), NULL, 0},
+    {"map", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, map), NULL, NULL},
+    {"ignore", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, ignore), NULL, NULL},
     {NULL, -1, 0, NULL, NULL}     /* end the list */
 };
 
@@ -114,6 +120,35 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
     return 0;
 }
 
+static int couchbase_delete_ignored_attributes(char *ignored, VALUE_PAIR *vp) {
+    char *tok;      /* token pointer */
+
+    /* check our configuration paramater */
+    if (ignored != NULL) {
+        /* parse map */
+        tok = strtok(ignored, ",");
+        /* loop through map */
+        while (tok != NULL) {
+            DEBUG("token == %s", tok);
+            /* next attribute in map */
+            tok = strtok(NULL, " ,");
+        }
+    }
+    /* fake return */
+    return 0;
+}
+
+/* remove sub-string from string */
+static char *vp_name_to_json_name(char *str) {
+    char *dest;         /* destination pointer */
+
+    /* remove all hyphens through some pointer magic */
+    for (dest = str; (*dest = *str); dest += (*str ++ != '-'));
+
+    /* return pointer */
+    return str;
+}
+
 /* add value/pair to json object */
 static json_object *value_pair_to_json_object(VALUE_PAIR *vp) {
     char value[255];    /* radius attribute value */
@@ -159,6 +194,7 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     rlm_couchbase_t *p = instance;      /* our module instance */
     char key[MAX_KEY_SIZE];             /* our document key */
     char document[MAX_VALUE_SIZE];      /* our document body */
+    char attribute[MAX_KEY_SIZE];       /* radius attribute name */
     int status = 0;                     /* account status type */
     int docfound = 0;                   /* document get toggle */
     lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
@@ -259,95 +295,34 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         case PW_STATUS_START:
             /* add start time */
             if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0)) != NULL) {
+                /* add to json object */
                 json_object_object_add(json, "startTimestamp", value_pair_to_json_object(vp));
             }
         break;
         case PW_STATUS_STOP:
             /* add stop time */
             if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0)) != NULL) {
+                /* add to json object */
                 json_object_object_add(json, "stopTimestamp", value_pair_to_json_object(vp));
             }
         break;
     }
 
-    /* session id */
-    if ((vp = pairfind(request->packet->vps, PW_ACCT_SESSION_ID, 0)) != NULL) {
-        json_object_object_add(json, "sessionId", value_pair_to_json_object(vp));
-    }
+    /* remove event timestamp pair */
+    pairdelete(&request->packet->vps, PW_EVENT_TIMESTAMP, 0);
 
-    /* authentication source */
-    if ((vp = pairfind(request->packet->vps, PW_ACCT_AUTHENTIC, 0)) != NULL) {
-        json_object_object_add(json, "authentic", value_pair_to_json_object(vp));
-    }
+    /* assign remaining value pairs */
+    vp = request->packet->vps;
 
-    /* user name */
-    if ((vp = pairfind(request->packet->vps, PW_USER_NAME, 0)) != NULL) {
-        json_object_object_add(json, "userName", value_pair_to_json_object(vp));
-    }
+    couchbase_delete_ignored_attributes(p->ignore, vp);
 
-    /* nas ip address */
-    if ((vp = pairfind(request->packet->vps, PW_NAS_IP_ADDRESS, 0)) != NULL) {
-        json_object_object_add(json, "nasIpAddress", value_pair_to_json_object(vp));
-    }
-
-    /* nas identifier */
-    if ((vp = pairfind(request->packet->vps, PW_NAS_IDENTIFIER, 0)) != NULL) {
-        json_object_object_add(json, "nasIdentifier", value_pair_to_json_object(vp));
-    }
-
-    /* nas port */
-    if ((vp = pairfind(request->packet->vps, PW_NAS_PORT, 0)) != NULL) {
-        json_object_object_add(json, "nasPort", value_pair_to_json_object(vp));
-    }
-
-    /* called station id */
-    if ((vp = pairfind(request->packet->vps, PW_CALLED_STATION_ID, 0)) != NULL) {
-        json_object_object_add(json, "calledStationId", value_pair_to_json_object(vp));
-    }
-
-    /* calling station id */
-    if ((vp = pairfind(request->packet->vps, PW_CALLING_STATION_ID, 0)) != NULL) {
-        json_object_object_add(json, "callingStationId", value_pair_to_json_object(vp));
-    }
-
-    /* framed ip address */
-    if ((vp = pairfind(request->packet->vps, PW_FRAMED_IP_ADDRESS, 0)) != NULL) {
-        json_object_object_add(json, "framedIpAddress", value_pair_to_json_object(vp));
-    }
-
-    /* nas port type */
-    if ((vp = pairfind(request->packet->vps, PW_NAS_PORT_TYPE, 0)) != NULL) {
-        json_object_object_add(json, "nasPortType", value_pair_to_json_object(vp));
-    }
-
-    /* connect info */
-    if ((vp = pairfind(request->packet->vps, PW_CONNECT_INFO, 0)) != NULL) {
-        json_object_object_add(json, "connectInfo", value_pair_to_json_object(vp));
-    }
-
-    /* session time */
-    if ((vp = pairfind(request->packet->vps, PW_ACCT_SESSION_TIME, 0)) != NULL) {
-        json_object_object_add(json, "sessionTime", value_pair_to_json_object(vp));
-    }
-
-    /* input packets */
-    if ((vp = pairfind(request->packet->vps, PW_ACCT_INPUT_PACKETS, 0)) != NULL) {
-        json_object_object_add(json, "inputPackets", value_pair_to_json_object(vp));
-    }
-
-    /* input octets */
-    if ((vp = pairfind(request->packet->vps, PW_ACCT_INPUT_OCTETS, 0)) != NULL) {
-        json_object_object_add(json, "inputOctets", value_pair_to_json_object(vp));
-    }
-
-    /* output packets */
-    if ((vp = pairfind(request->packet->vps, PW_ACCT_OUTPUT_PACKETS, 0)) != NULL) {
-        json_object_object_add(json, "outputPackets", value_pair_to_json_object(vp));
-    }
-
-    /* output octets */
-    if ((vp = pairfind(request->packet->vps, PW_ACCT_OUTPUT_OCTETS, 0)) != NULL) {
-        json_object_object_add(json, "outputOctets", value_pair_to_json_object(vp));
+    /* loop through pairs */
+    while (vp) {
+        strncpy(attribute, vp->name, sizeof(attribute));
+        /* add to json object with prettified name */
+        json_object_object_add(json, vp_name_to_json_name(attribute), value_pair_to_json_object(vp));
+        /* goto next pair */
+        vp = vp->next;
     }
 
     /* make sure we have enough room in our document buffer */

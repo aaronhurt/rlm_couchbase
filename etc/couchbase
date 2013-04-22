@@ -8,12 +8,44 @@ couchbase {
     ## couchbase bucket name
     bucket = "radius"
 
-    ## document expire time in seconds (0 = never)
-    expire = 2592000
-
     ## username for bucket
     #user = "username"
 
     ## bucket password
     #pass = "password"
+
+    ## document expire time in seconds (0 = never)
+    expire = 2592000
+
+    ## ignored radius attributes as json array
+    ignore = "{ \"ignore\": [ \
+            \"Acct-Status-Type\", \
+            \"Attr-26.26928.1\", \
+            \"Attr-26.26928.6\", \
+            \"NAS-Port\", \
+            \"Class\", \
+            \"Acct-Input-Gigawords\", \
+            \"Acct-Output-Gigawords\ ]" \
+    }"
+
+    ## radius attribute to json string
+    map = "{ \
+            \"Acct-Session-Id\": \"sessionId\", \
+            \"Acct-Status-Type\": \"statusType\", \
+            \"Act-Authentic\": \"authentic\", \
+            \"User-Name\": \"userName\", \
+            \"NAS-IP-Address\": \"nasIpAddress\", \
+            \"NAS-Identifier\": \"nasIdentifier\", \
+            \"Called-Station-Id\": \"calledStationId\", \
+            \"Calling-Station-Id\": \"callingStationId\", \
+            \"Framed-IP-Addres\": \"framedIpAddress\", \
+            \"Nas-Port-Type\": \"nasPortType\", \
+            \"Connect-Info\": \"connectInfo\", \
+            \"Acct-Session-Time\": \"acctSessionTime\", \
+            \"Acct-Input-Packets\": \"acctInputPackets\", \
+            \"Acct-Output-Packets\": \"acctOutputPackets\", \
+            \"Acct-Input-Octets\": \"acctInputOctets\", \
+            \"Acct-Output-Octets\": \"acctOutputOctets\" \
+    }"
+
 }
