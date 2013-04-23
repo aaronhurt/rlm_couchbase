@@ -80,7 +80,8 @@ Configuration
                 \"Acct-Input-Octets\": \"inputOctets\", \
                 \"Acct-Output-Octets\": \"outputOctets\", \
                 \"Acct-Input-Gigawords\": \"inputGigawords\", \
-                \"Acct-Output-Gigawords\": \"outputGigawords\" \
+                \"Acct-Output-Gigawords\": \"outputGigawords\", \
+                \"Event-Timestamp\": \"lastUpdated\" \
         }"
     }
 

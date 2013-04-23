@@ -253,10 +253,7 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         break;
     }
 
-    /* remove event timestamp pair ... we're done with this */
-    pairdelete(&request->packet->vps, PW_EVENT_TIMESTAMP, 0);
-
-    /* assign remaining value pairs */
+    /* assign value pairs */
     vp = request->packet->vps;
 
     /* loop through pairs */
@@ -265,8 +262,8 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
         if (couchbase_attribute_to_element(vp->name, p->map_object, &attribute) == 0) {
             /* debug */
             RDEBUG("mapped attribute %s => %s", vp->name, attribute);
-            /* add to json object with prettified name */
-            //json_object_object_add(json, attribute, couchbase_value_pair_to_json_object(vp));
+            /* add to json object with mapped attribute name */
+            json_object_object_add(json, attribute, couchbase_value_pair_to_json_object(vp));
         }
         /* goto next pair */
         vp = vp->next;
