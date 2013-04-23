@@ -1,7 +1,5 @@
 /* junk */
 
-#include <ctype.h>
-
 #include <freeradius-devel/ident.h>
 RCSID("$Id$")
 
@@ -15,19 +13,20 @@ RCSID("$Id$")
 #include <json/json.h>
 
 #include "callbacks.h"
+#include "util.h"
 
 /* configuration struct */
 typedef struct rlm_couchbase_t {
-    char *key;              /* document key */
-    char *host;             /* couchbase connection host */
-    char *bucket;           /* couchbase bucket */
-    char *user;             /* couchbase bucket user name */
-    char *pass;             /* couchbase bucket password */
-    unsigned int expire;    /* document expire time in seconds */
-    char *map;              /* user defined attribute map */
-    char *ignore;           /* user defined list of ignored attributes */
-    char *cb_cookie;        /* buffer to hold documents returned from couchbase */
-    lcb_t cb_instance;      /* couchbase connection instance */
+    char *key;                  /* document key */
+    char *host;                 /* couchbase connection host */
+    char *bucket;               /* couchbase bucket */
+    char *user;                 /* couchbase bucket user name */
+    char *pass;                 /* couchbase bucket password */
+    unsigned int expire;        /* document expire time in seconds */
+    char *map;                  /* user defined attribute map */
+    json_object *map_object;    /* json object for parsed attribute map */
+    char *cb_cookie;            /* buffer to hold documents returned from couchbase */
+    lcb_t cb_instance;          /* couchbase connection instance */
 } rlm_couchbase_t;
 
 /* map config to internal variables */
@@ -38,8 +37,7 @@ static const CONF_PARSER module_config[] = {
     {"user", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, user), NULL, NULL},
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     {"expire", PW_TYPE_INTEGER, offsetof(rlm_couchbase_t, expire), NULL, 0},
-    {"map", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, map), NULL, NULL},
-    {"ignore", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, ignore), NULL, NULL},
+    {"map", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, map), NULL, "{null}"},
     {NULL, -1, 0, NULL, NULL}     /* end the list */
 };
 
@@ -48,6 +46,7 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
     rlm_couchbase_t *data;                  /* module configuration struct */
     lcb_error_t cb_error;                   /* couchbase error holder */
     struct lcb_create_st create_options;    /* couchbase connection options */
+    enum json_tokener_error json_error = json_tokener_success;  /* json parse error */
 
     /* storage for instance data */
     data = rad_malloc(sizeof(*data));
@@ -62,6 +61,21 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
     if (cf_section_parse(conf, data, module_config) < 0) {
         radlog(L_ERR, "rlm_couchbase: Failed to parse config!");
         free(data);
+        return -1;
+    }
+
+    /* parse json body from config */
+    data->map_object = json_tokener_parse_verbose(data->map, &json_error);
+
+    /* check error */
+    if (json_error != json_tokener_success) {
+        /* log error */
+        radlog(L_ERR, "rlm_couchbase: Failed to parse attribute map: %s", json_tokener_error_desc(json_error));
+
+        /* cleanup json object */
+        json_object_put(data->map_object);
+
+        /* fail */
         return -1;
     }
 
@@ -120,81 +134,12 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
     return 0;
 }
 
-static int couchbase_delete_ignored_attributes(char *ignored, VALUE_PAIR *vp) {
-    char *tok;      /* token pointer */
-
-    /* check our configuration paramater */
-    if (ignored != NULL) {
-        /* parse map */
-        tok = strtok(ignored, ",");
-        /* loop through map */
-        while (tok != NULL) {
-            DEBUG("token == %s", tok);
-            /* next attribute in map */
-            tok = strtok(NULL, " ,");
-        }
-    }
-    /* fake return */
-    return 0;
-}
-
-/* remove sub-string from string */
-static char *vp_name_to_json_name(char *str) {
-    char *dest;         /* destination pointer */
-
-    /* remove all hyphens through some pointer magic */
-    for (dest = str; (*dest = *str); dest += (*str ++ != '-'));
-
-    /* return pointer */
-    return str;
-}
-
-/* add value/pair to json object */
-static json_object *value_pair_to_json_object(VALUE_PAIR *vp) {
-    char value[255];    /* radius attribute value */
-
-    /* add this attribute/value pair to our json output */
-    if (!vp->flags.has_tag) {
-        switch (vp->type) {
-            case PW_TYPE_INTEGER:
-            case PW_TYPE_BYTE:
-            case PW_TYPE_SHORT:
-                /* skip if we have flags */
-                if (vp->flags.has_value) break;
-                /* return as int */
-                return json_object_new_int(vp->vp_integer);
-            break;
-            case PW_TYPE_SIGNED:
-                /* return as int */
-                return json_object_new_int(vp->vp_signed);
-            break;
-            case PW_TYPE_INTEGER64:
-                /* return as 64 bit int */
-                return json_object_new_int64(vp->vp_integer64);
-            break;
-        }
-    }
-
-    /* keep going if not set above */
-    switch (vp->type) {
-        case PW_TYPE_STRING:
-            /* return string value */
-            return json_object_new_string(vp->vp_strvalue);
-        default:
-            /* get standard value */
-            vp_prints_value(value, sizeof(value), vp, 0);
-            /* return string value from above */
-            return json_object_new_string(value);
-        break;
-    }
-}
-
 /* write accounting data to couchbase */
 static int couchbase_accounting(void *instance, REQUEST *request) {
     rlm_couchbase_t *p = instance;      /* our module instance */
     char key[MAX_KEY_SIZE];             /* our document key */
     char document[MAX_VALUE_SIZE];      /* our document body */
-    char attribute[MAX_KEY_SIZE];       /* radius attribute name */
+    char attribute[MAX_KEY_SIZE];       /* mapped radius attribute */
     int status = 0;                     /* account status type */
     int docfound = 0;                   /* document get toggle */
     lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
@@ -296,31 +241,33 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
             /* add start time */
             if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0)) != NULL) {
                 /* add to json object */
-                json_object_object_add(json, "startTimestamp", value_pair_to_json_object(vp));
+                json_object_object_add(json, "startTimestamp", couchbase_value_pair_to_json_object(vp));
             }
         break;
         case PW_STATUS_STOP:
             /* add stop time */
             if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0)) != NULL) {
                 /* add to json object */
-                json_object_object_add(json, "stopTimestamp", value_pair_to_json_object(vp));
+                json_object_object_add(json, "stopTimestamp", couchbase_value_pair_to_json_object(vp));
             }
         break;
     }
 
-    /* remove event timestamp pair */
+    /* remove event timestamp pair ... we're done with this */
     pairdelete(&request->packet->vps, PW_EVENT_TIMESTAMP, 0);
 
     /* assign remaining value pairs */
     vp = request->packet->vps;
 
-    couchbase_delete_ignored_attributes(p->ignore, vp);
-
     /* loop through pairs */
     while (vp) {
-        strncpy(attribute, vp->name, sizeof(attribute));
-        /* add to json object with prettified name */
-        json_object_object_add(json, vp_name_to_json_name(attribute), value_pair_to_json_object(vp));
+        /* map attribute */
+        if (couchbase_attribute_to_element(vp->name, p->map_object, &attribute) == 0) {
+            /* debug */
+            RDEBUG("mapped attribute %s => %s", vp->name, attribute);
+            /* add to json object with prettified name */
+            //json_object_object_add(json, attribute, couchbase_value_pair_to_json_object(vp));
+        }
         /* goto next pair */
         vp = vp->next;
     }
@@ -384,6 +331,9 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
 static int couchbase_detach(void *instance)
 {
     rlm_couchbase_t *p = instance;  /* instance struct */
+
+    /* free map object */
+    json_object_put(p->map_object);
 
     /* destroy/free couchbase instance */
     lcb_destroy(p->cb_instance);

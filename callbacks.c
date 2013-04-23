@@ -6,6 +6,7 @@
 #include <libcouchbase/couchbase.h>
 
 #include "callbacks.h"
+#include "util.h"
 
 /* general couchbase error callback */
 void couchbase_error_callback(lcb_t instance, lcb_error_t error, const char *errinfo) {
@@ -34,7 +35,7 @@ void couchbase_get_callback(lcb_t instance, const void *cookie, lcb_error_t erro
             /* debugging */
             DEBUG("rlm_couchbase: Error, returned document too large for buffer!");
         } else {
-            /* store document data */ 
+            /* store document data */
             strncpy((char *) cookie, resp->v.v0.bytes, resp->v.v0.nbytes);
         }
     } else {

@@ -1,6 +1,6 @@
 TARGET      = @targetname@
-SRCS        = rlm_couchbase.c callbacks.c
-HEADERS     = callbacks.h
+SRCS        = rlm_couchbase.c util.c callbacks.c
+HEADERS     = util.h callbacks.h
 RLM_CFLAGS  = @couchbase_cflags@
 RLM_LIBS    = @couchbase_ldflags@ -lcouchbase -ljson
 

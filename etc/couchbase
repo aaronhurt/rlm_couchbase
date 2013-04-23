@@ -17,35 +17,28 @@ couchbase {
     ## document expire time in seconds (0 = never)
     expire = 2592000
 
-    ## ignored radius attributes as json array
-    ignore = "{ \"ignore\": [ \
-            \"Acct-Status-Type\", \
-            \"Attr-26.26928.1\", \
-            \"Attr-26.26928.6\", \
-            \"NAS-Port\", \
-            \"Class\", \
-            \"Acct-Input-Gigawords\", \
-            \"Acct-Output-Gigawords\ ]" \
-    }"
-
-    ## radius attribute to json string
+    ## map attribute names to json element names
+    ## attributes not in this map will not be recorded
     map = "{ \
             \"Acct-Session-Id\": \"sessionId\", \
             \"Acct-Status-Type\": \"statusType\", \
-            \"Act-Authentic\": \"authentic\", \
+            \"AcctAuthentic\": \"authentic\", \
             \"User-Name\": \"userName\", \
             \"NAS-IP-Address\": \"nasIpAddress\", \
             \"NAS-Identifier\": \"nasIdentifier\", \
+            \"NAS-Port\": \"nasPort\", \
             \"Called-Station-Id\": \"calledStationId\", \
             \"Calling-Station-Id\": \"callingStationId\", \
-            \"Framed-IP-Addres\": \"framedIpAddress\", \
+            \"FramedIPAddres\": \"framedIpAddress\", \
             \"Nas-Port-Type\": \"nasPortType\", \
             \"Connect-Info\": \"connectInfo\", \
-            \"Acct-Session-Time\": \"acctSessionTime\", \
-            \"Acct-Input-Packets\": \"acctInputPackets\", \
-            \"Acct-Output-Packets\": \"acctOutputPackets\", \
-            \"Acct-Input-Octets\": \"acctInputOctets\", \
-            \"Acct-Output-Octets\": \"acctOutputOctets\" \
+            \"Acct-Session-Time\": \"sessionTime\", \
+            \"Acct-Input-Packets\": \"inputPackets\", \
+            \"Acct-Output-Packets\": \"outputPackets\", \
+            \"Acct-Input-Octets\": \"inputOctets\", \
+            \"Acct-Output-Octets\": \"outputOctets\", \
+            \"Acct-Input-Gigawords\": \"inputGigawords\", \
+            \"Acct-Output-Gigawords\": \"outputGigawords\" \
     }"
 
 }
