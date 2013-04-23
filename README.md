@@ -63,8 +63,8 @@ Configuration
         ## attributes not in this map will not be recorded
         map = "{ \
                 \"Acct-Session-Id\": \"sessionId\", \
-                \"Acct-Status-Type\": \"statusType\", \
-                \"AcctAuthentic\": \"authentic\", \
+                \"Acct-Status-Type\": \"lastStatus\", \
+                \"Acct-Authentic\": \"authentic\", \
                 \"User-Name\": \"userName\", \
                 \"NAS-IP-Address\": \"nasIpAddress\", \
                 \"NAS-Identifier\": \"nasIdentifier\", \
