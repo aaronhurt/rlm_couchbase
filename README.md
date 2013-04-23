@@ -44,8 +44,9 @@ Configuration
         ## attribute to use for the document key
         key = "Acct-Session-Id"
 
-        ## couchbase host
-        host = "cbdb-host.com:8091"
+        ## couchbase host or hosts - multiple hosts should be semi-colon separated
+        ## ports are optional if servers are listening on the standard port
+        host = "cb01-blargs.com:9091;cb02-blargs.com;cb03-blargs.com"
 
         ## couchbase bucket name
         bucket = "radius"
