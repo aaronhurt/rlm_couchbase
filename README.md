@@ -24,7 +24,9 @@ Example from an Aerohive Wireless Access Point:
       "inputPackets": 3284,
       "inputOctets": 460810,
       "outputPackets": 826,
-      "outputOctets": 356143
+      "outputOctets": 356143,
+      "inputGigawords": 0,
+      "outputGigawords": 0
     }
 
 This module was built and tested against freeradius release_3_0_0_beta0
@@ -43,19 +45,43 @@ Configuration
         key = "Acct-Session-Id"
 
         ## couchbase host
-        host = "cb-server.domain.com:8091"
+        host = "cbdb-host.com:8091"
 
         ## couchbase bucket name
         bucket = "radius"
 
-        ## document expire time in seconds (0 = never)
-        expire = 2592000
-    
         ## username for bucket
         #user = "username"
 
         ## bucket password
         #pass = "password"
+
+        ## document expire time in seconds (0 = never)
+        expire = 2592000
+
+        ## map attribute names to json element names
+        ## attributes not in this map will not be recorded
+        map = "{ \
+                \"Acct-Session-Id\": \"sessionId\", \
+                \"Acct-Status-Type\": \"statusType\", \
+                \"AcctAuthentic\": \"authentic\", \
+                \"User-Name\": \"userName\", \
+                \"NAS-IP-Address\": \"nasIpAddress\", \
+                \"NAS-Identifier\": \"nasIdentifier\", \
+                \"NAS-Port\": \"nasPort\", \
+                \"Called-Station-Id\": \"calledStationId\", \
+                \"Calling-Station-Id\": \"callingStationId\", \
+                \"FramedIPAddres\": \"framedIpAddress\", \
+                \"Nas-Port-Type\": \"nasPortType\", \
+                \"Connect-Info\": \"connectInfo\", \
+                \"Acct-Session-Time\": \"sessionTime\", \
+                \"Acct-Input-Packets\": \"inputPackets\", \
+                \"Acct-Output-Packets\": \"outputPackets\", \
+                \"Acct-Input-Octets\": \"inputOctets\", \
+                \"Acct-Output-Octets\": \"outputOctets\", \
+                \"Acct-Input-Gigawords\": \"inputGigawords\", \
+                \"Acct-Output-Gigawords\": \"outputGigawords\" \
+        }"
     }
 
 Disclaimer
