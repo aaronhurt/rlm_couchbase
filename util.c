@@ -1,7 +1,6 @@
 /* blargs */
 
 #include <freeradius-devel/radiusd.h>
-#include <freeradius-devel/libradius.h>
 
 #include <json/json.h>
 
@@ -10,19 +9,30 @@
 /* map free radius attribute to user defined json element name */
 int couchbase_attribute_to_element(const char *name, json_object *map, void *attribute) {
     json_object *jval;      /* json object */
+    int length;             /* json value length */
 
     /* clear attribute */
     memset((char *) attribute, 0, MAX_KEY_SIZE);
 
     /* attempt to map attribute */
     if (json_object_object_get_ex(map, name, &jval)) {
-        /* copy string value to attribute */
-        strncpy(attribute, json_object_get_string(jval), MAX_KEY_SIZE);
-        /* return good */
-        return 0;
+        /* get value length */
+        length = json_object_get_string_len(jval);
+        /* check buffer size */
+        if (length > MAX_KEY_SIZE -1) {
+            /* oops ... this value is bigger than our buffer ... error out */
+            radlog(L_ERR, "rlm_couchbase: Error, json value larger than MAX_KEY_SIZE - %d", MAX_KEY_SIZE);
+            /* return fail */
+            return -1;
+        } else {
+            /* copy string value to attribute */
+            strncpy(attribute, json_object_get_string(jval), length);
+            /* return good */
+            return 0;
+        }
     } else {
         /* debugging */
-        DEBUG("rlm_couchbase: No map entry for attribute %s - skipping", name);
+        DEBUG("rlm_couchbase: Skipping attribute with no map entry - %s", name);
         /* return fail */
         return -1;
     }

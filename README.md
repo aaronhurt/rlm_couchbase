@@ -7,26 +7,26 @@ Different status types (start/stop/update) are merged into a single document for
 Example from an Aerohive Wireless Access Point:
 
     {
-      "startTimestamp": "Apr 16 2013 19:44:13 CDT",
-      "connectInfo": "11na",
-      "stopTimestamp": "Apr 16 2013 19:58:46 CDT",
-      "sessionId": "0000001B-00000059",
+      "startTimestamp": "Apr 23 2013 17:52:22 CDT",
+      "connectInfo": "11ng",
+      "stopTimestamp": "Apr 23 2013 18:05:52 CDT",
+      "sessionId": "5168E1E1-00000613",
+      "lastStatus": "Stop",
       "authentic": "RADIUS",
       "userName": "jappleseed",
-      "nasIpAddress": "172.27.3.153",
-      "nasIdentifier": "wifi-test.corp.com",
+      "nasIpAddress": "10.11.12.13",
+      "nasIdentifier": "ap01-site.blargs.com",
       "nasPort": 0,
-      "calledStationId": "08-EA-44-3D-AF-A8:Corp-SSID",
-      "callingStationId": "F0-D1-A9-78-8E-F5",
-      "framedIpAddress": "10.11.12.13",
-      "nasPortType": "Wireless-802.11",
-      "sessionTime": 873,
-      "inputPackets": 3284,
-      "inputOctets": 460810,
-      "outputPackets": 826,
-      "outputOctets": 356143,
+      "calledStationId": "40-18-B1-01-3C-54:Corp-SSID",
+      "callingStationId": "C0-9F-42-07-4E-9C",
+      "sessionTime": 810,
+      "inputPackets": 410,
+      "inputOctets": 42348,
       "inputGigawords": 0,
-      "outputGigawords": 0
+      "outputOctets": 70692,
+      "outputGigawords": 0,
+      "outputPackets": 108,
+      "lastUpdated": "Apr 23 2013 18:05:52 CDT"
     }
 
 This module was built and tested against freeradius release_3_0_0_beta0

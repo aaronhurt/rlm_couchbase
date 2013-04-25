@@ -17,16 +17,16 @@ RCSID("$Id$")
 
 /* configuration struct */
 typedef struct rlm_couchbase_t {
-    char *key;                  /* document key */
-    char *host;                 /* couchbase connection host */
-    char *bucket;               /* couchbase bucket */
-    char *user;                 /* couchbase bucket user name */
-    char *pass;                 /* couchbase bucket password */
-    unsigned int expire;        /* document expire time in seconds */
-    char *map;                  /* user defined attribute map */
-    json_object *map_object;    /* json object for parsed attribute map */
-    char *cb_cookie;            /* buffer to hold documents returned from couchbase */
-    lcb_t cb_instance;          /* couchbase connection instance */
+    char *key;                      /* document key */
+    char *host;                     /* couchbase connection host */
+    char *bucket;                   /* couchbase bucket */
+    char *user;                     /* couchbase bucket user name */
+    char *pass;                     /* couchbase bucket password */
+    unsigned int expire;            /* document expire time in seconds */
+    char *map;                      /* user defined attribute map */
+    json_object *map_object;        /* json object for parsed attribute map */
+    char cb_cookie[MAX_VALUE_SIZE]; /* buffer to hold documents returned from couchbase */
+    lcb_t cb_instance;              /* couchbase connection instance */
 } rlm_couchbase_t;
 
 /* map config to internal variables */
@@ -99,12 +99,6 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
     if (cb_error != LCB_SUCCESS) {
         radlog(L_ERR, "rlm_couchbase: Failed to create libcouchbase instance: %s", lcb_strerror(NULL, cb_error));
         free(data);
-        return -1;
-    }
-
-    /* allocate cookie */
-    data->cb_cookie = rad_malloc(MAX_VALUE_SIZE);
-    if (!data->cb_cookie) {
         return -1;
     }
 
@@ -193,22 +187,21 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
             cmd.v.v0.nkey = strlen(key);
 
             /* get document */
-            cb_error = lcb_get(p->cb_instance, p->cb_cookie, 1, commands);
+            cb_error = lcb_get(p->cb_instance, &p->cb_cookie, 1, commands);
 
             /* wait on get */
             lcb_wait(p->cb_instance);
 
             /* check return */
-            if (cb_error != LCB_SUCCESS) {
-                 /* debugging ... not a real error as document may not exist */
-                RDEBUG("failed to get document (%s): %s", key, lcb_strerror(NULL, cb_error));
-            } else {
+            if (cb_error == LCB_SUCCESS) {
                 /* check for valid pointer */
                 if (p->cb_cookie[0] != '\0') {
                     /* parse json body from couchbase */
                     json = json_tokener_parse_verbose(p->cb_cookie, &json_error);
                     /* check error */
                     if (json_error == json_tokener_success) {
+                        /* debugging */
+                        RDEBUG("parsed json body from couchbase: %s", json_object_to_json_string(json));
                         /* set doc found */
                         docfound = 1;
                     } else {
@@ -334,9 +327,6 @@ static int couchbase_detach(void *instance)
 
     /* destroy/free couchbase instance */
     lcb_destroy(p->cb_instance);
-
-    /* free couchbase cookie */
-    free(p->cb_cookie);
 
     /* free radius instance */
     free(p);
