@@ -42,7 +42,7 @@ static const CONF_PARSER module_config[] = {
 };
 
 /* initialize couchbase connection */
-static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
+static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     rlm_couchbase_t *data;                  /* module configuration struct */
     lcb_error_t cb_error;                   /* couchbase error holder */
     struct lcb_create_st create_options;    /* couchbase connection options */
@@ -129,7 +129,7 @@ static int couchbase_instantiate(CONF_SECTION *conf, void **instance) {
 }
 
 /* write accounting data to couchbase */
-static int couchbase_accounting(void *instance, REQUEST *request) {
+static int couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *request) {
     rlm_couchbase_t *p = instance;      /* our module instance */
     char key[MAX_KEY_SIZE];             /* our document key */
     char document[MAX_VALUE_SIZE];      /* our document body */
@@ -146,7 +146,7 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     rad_assert(request->packet != NULL);
 
     /* sanity check */
-    if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE, 0)) != NULL) {
+    if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE, 0, TAG_ANY)) != NULL) {
         /* set status */
         status = vp->vp_integer;
     } else {
@@ -165,12 +165,12 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     da = dict_attrbyname(p->key);
 
     /* look for document key attribute */
-    if ((vp = pairfind(request->packet->vps, da->attr, 0)) != NULL) {
+    if ((vp = pairfind(request->packet->vps, da->attr, 0, TAG_ANY)) != NULL) {
         /* store key */
         vp_prints_value(key, sizeof(key), vp, 0);
 
         /* debugging */
-        RDEBUG("found document key: '%s' => '%s'", vp->name, key);
+        RDEBUG("found document key: '%s' => '%s'", vp->da->name, key);
 
         /* prevent variable conflicts in local space */
         {
@@ -232,34 +232,29 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
     switch (status) {
         case PW_STATUS_START:
             /* add start time */
-            if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0)) != NULL) {
+            if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0, TAG_ANY)) != NULL) {
                 /* add to json object */
                 json_object_object_add(json, "startTimestamp", couchbase_value_pair_to_json_object(vp));
             }
         break;
         case PW_STATUS_STOP:
             /* add stop time */
-            if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0)) != NULL) {
+            if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0, TAG_ANY)) != NULL) {
                 /* add to json object */
                 json_object_object_add(json, "stopTimestamp", couchbase_value_pair_to_json_object(vp));
             }
         break;
     }
 
-    /* assign value pairs */
-    vp = request->packet->vps;
-
     /* loop through pairs */
-    while (vp) {
+    for(vp = request->packet->vps; vp; vp = vp->next) {
         /* map attribute */
-        if (couchbase_attribute_to_element(vp->name, p->map_object, &attribute) == 0) {
+        if (couchbase_attribute_to_element(vp->da->name, p->map_object, &attribute) == 0) {
             /* debug */
-            RDEBUG("mapped attribute %s => %s", vp->name, attribute);
+            RDEBUG("mapped attribute %s => %s", vp->da->name, attribute);
             /* add to json object with mapped attribute name */
             json_object_object_add(json, attribute, couchbase_value_pair_to_json_object(vp));
         }
-        /* goto next pair */
-        vp = vp->next;
     }
 
     /* make sure we have enough room in our document buffer */
@@ -318,7 +313,7 @@ static int couchbase_accounting(void *instance, REQUEST *request) {
 }
 
 /* free any memory we allocated */
-static int couchbase_detach(void *instance)
+static int couchbase_detach(UNUSED void *instance)
 {
     rlm_couchbase_t *p = instance;  /* instance struct */
 
@@ -340,6 +335,8 @@ module_t rlm_couchbase = {
     RLM_MODULE_INIT,
     "couchbase",
     RLM_TYPE_THREAD_SAFE,       /* type */
+    sizeof(rlm_couchbase_t),
+    module_config,
     couchbase_instantiate,      /* instantiation */
     couchbase_detach,           /* detach */
     {
