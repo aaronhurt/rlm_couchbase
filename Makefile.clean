@@ -1,6 +1,6 @@
 TARGET		= rlm_couchbase
-SRCS		= rlm_couchbase
-HEADERS		= config.h
+SRCS		= rlm_couchbase.c callbacks.c util.c
+HEADERS		= config.h util.h callbacks.h
 RLM_CFLAGS	=
 RLM_LIBS	= 
 

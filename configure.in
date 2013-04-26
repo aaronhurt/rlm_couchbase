@@ -1,7 +1,7 @@
 AC_PREREQ([2.53])
-AC_INIT(rlm_couchbase.c)
+AC_INIT(rlm_example.c)
 AC_REVISION($Revision$)
-AC_DEFUN(modname,[rlm_couchbase])
+AC_DEFUN(modname,[rlm_example])
 
 if test x$with_[]modname != xno; then
 
@@ -12,22 +12,22 @@ if test x$with_[]modname != xno; then
 	dnl set $fail to what's missing, on fatal errors.
 	dnl use AC_MSG_WARN() on important messages.
 	AC_CHECK_LIB(c, printf,
-		[ couchbase_ldflags="$couchbase_ldflags -lc" ],
+		[ mod_ldflags="$mod_ldflags -lc" ],
 		[ fail=$fail" printf" ]
 	)
 
 	AC_CHECK_HEADER(stdio.h,
-		[ couchbase_cflags="$couchbase_cflags -I/usr/include" ],
+		[ mod_cflags="$mod_cflags -I/usr/include" ],
 		[ fail=$fail" stdio.h" ]
 	)
 
-	AC_CHECK_HEADERS(stdio.h stdlib.h)  # for the config.h defs
-	AC_CHECK_FUNCS(printf)  # for the config.h defs
+	AC_CHECK_HEADERS(stdio.h stdlib.h)
+	AC_CHECK_FUNCS(printf)
 
-	targetname=modname     # keep this!  Don't change!
+	targetname=modname
 else
-	targetname=            # keep this!  Don't change!
-	echo \*\*\* module modname is disabled.  # keep this!  Don't change!
+	targetname=
+	echo \*\*\* module modname is disabled.
 fi
 
 dnl  Don't change this section.
@@ -42,10 +42,10 @@ if test x"$fail" != x""; then
 fi
 
 
-AC_SUBST(couchbase_cflags)
-AC_SUBST(couchbase_ldflags)
+AC_SUBST(mod_cflags)
+AC_SUBST(mod_ldflags)
 
 AC_CONFIG_HEADER(config.h)
 
-AC_SUBST(targetname)  # keep this!  Don't change!
-AC_OUTPUT(Makefile)  # keep this!  Don't change!
+AC_SUBST(targetname)
+AC_OUTPUT(all.mk)
