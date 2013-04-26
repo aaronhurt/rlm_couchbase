@@ -114,7 +114,7 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
 }
 
 /* write accounting data to couchbase */
-static int couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *request) {
+static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *request) {
     rlm_couchbase_t *p = instance;      /* our module instance */
     char key[MAX_KEY_SIZE];             /* our document key */
     char document[MAX_VALUE_SIZE];      /* our document body */
