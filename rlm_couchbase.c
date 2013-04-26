@@ -41,29 +41,21 @@ static const CONF_PARSER module_config[] = {
 
 /* initialize couchbase connection */
 static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
-    rlm_couchbase_t *data;                  /* module configuration struct */
     lcb_error_t cb_error;                   /* couchbase error holder */
     struct lcb_create_st create_options;    /* couchbase connection options */
     enum json_tokener_error json_error = json_tokener_success;  /* json parse error */
 
-    /* storage for instance data */
-    data = rad_malloc(sizeof(*data));
-    if (!data) {
-        return -1;
-    }
-
-    /* clear data */
-    memset(data, 0, sizeof(*data));
+    /* build instance */
+    rlm_couchbase_t *inst = instance;
 
     /* fail on bad config */
-    if (cf_section_parse(conf, data, module_config) < 0) {
+    if (cf_section_parse(conf, inst, module_config) < 0) {
         radlog(L_ERR, "rlm_couchbase: Failed to parse config!");
-        free(data);
         return -1;
     }
 
     /* parse json body from config */
-    data->map_object = json_tokener_parse_verbose(data->map, &json_error);
+    inst->map_object = json_tokener_parse_verbose(inst->map, &json_error);
 
     /* check error */
     if (json_error != json_tokener_success) {
@@ -71,7 +63,7 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
         radlog(L_ERR, "rlm_couchbase: Failed to parse attribute map: %s", json_tokener_error_desc(json_error));
 
         /* cleanup json object */
-        json_object_put(data->map_object);
+        json_object_put(inst->map_object);
 
         /* fail */
         return -1;
@@ -81,46 +73,41 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     memset(&create_options, 0, sizeof(create_options));
 
     /* assign couchbase connection options */
-    create_options.v.v0.host = data->host;
-    create_options.v.v0.bucket = data->bucket;
+    create_options.v.v0.host = inst->host;
+    create_options.v.v0.bucket = inst->bucket;
 
     /* assign user and password if they were both passed */
-    if (data->user != NULL || data->pass != NULL) {
-        create_options.v.v0.user = data->user;
-        create_options.v.v0.passwd = data->pass;
+    if (inst->user != NULL || inst->pass != NULL) {
+        create_options.v.v0.user = inst->user;
+        create_options.v.v0.passwd = inst->pass;
     }
 
     /* create couchbase connection instance */
-    cb_error = lcb_create(&data->cb_instance, &create_options);
+    cb_error = lcb_create(&inst->cb_instance, &create_options);
 
     /* check error status */
     if (cb_error != LCB_SUCCESS) {
         radlog(L_ERR, "rlm_couchbase: Failed to create libcouchbase instance: %s", lcb_strerror(NULL, cb_error));
-        free(data);
         return -1;
     }
 
     /* clear cookie */
-    memset(data->cb_cookie, 0, MAX_VALUE_SIZE);
+    memset(inst->cb_cookie, 0, MAX_VALUE_SIZE);
 
     /* initiate connection */
-    if ((cb_error = lcb_connect(data->cb_instance)) != LCB_SUCCESS) {
+    if ((cb_error = lcb_connect(inst->cb_instance)) != LCB_SUCCESS) {
         radlog(L_ERR, "rlm_couchbase: Failed to initiate connect: %s", lcb_strerror(NULL, cb_error));
-        lcb_destroy(data->cb_instance);
-        free(data);
+        lcb_destroy(inst->cb_instance);
         return -1;
     }
 
     /* set general method callbacks */
-    lcb_set_error_callback(data->cb_instance, couchbase_error_callback);
-    lcb_set_get_callback(data->cb_instance, couchbase_get_callback);
-    lcb_set_store_callback(data->cb_instance, couchbase_store_callback);
+    lcb_set_error_callback(inst->cb_instance, couchbase_error_callback);
+    lcb_set_get_callback(inst->cb_instance, couchbase_get_callback);
+    lcb_set_store_callback(inst->cb_instance, couchbase_store_callback);
 
     /* wait on connection */
-    lcb_wait(data->cb_instance);
-
-    /* assign instance */
-    *instance = data;
+    lcb_wait(inst->cb_instance);
 
     /* return okay */
     return 0;
@@ -320,9 +307,6 @@ static int couchbase_detach(UNUSED void *instance)
 
     /* destroy/free couchbase instance */
     lcb_destroy(p->cb_instance);
-
-    /* free radius instance */
-    free(p);
 
     /* return okay */
     return 0;
