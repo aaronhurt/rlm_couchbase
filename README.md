@@ -29,7 +29,7 @@ Example from an Aerohive Wireless Access Point:
       "lastUpdated": "Apr 23 2013 18:05:52 CDT"
     }
 
-This module was built and tested against freeradius release_3_0_0_beta0
+This module was built and tested against freeradius-server master branch as of 04/26/2013.
 
 To Use
 ------
