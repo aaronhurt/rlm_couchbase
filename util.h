@@ -3,6 +3,8 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
+RCSIDH(util_h, "$Id$");
+
 #include <json/json.h>
 
 /* maximum size of a stored value */

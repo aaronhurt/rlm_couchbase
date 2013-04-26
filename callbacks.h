@@ -3,6 +3,8 @@
 #ifndef _CALLBACKS_H
 #define _CALLBACKS_H
 
+RCSIDH(callbacks_h, "$Id$");
+
 /* define functions */
 void couchbase_error_callback(lcb_t instance, lcb_error_t error, const char *errinfo);
 

@@ -1,4 +1,5 @@
 /* couchbase stuff */
+RCSID("$Id$")
 
 #include <freeradius-devel/radiusd.h>
 

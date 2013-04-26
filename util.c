@@ -1,4 +1,5 @@
 /* blargs */
+RCSID("$Id$")
 
 #include <freeradius-devel/radiusd.h>
 
