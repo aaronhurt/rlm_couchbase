@@ -44,13 +44,13 @@ json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp) {
     char value[255];    /* radius attribute value */
 
     /* add this attribute/value pair to our json output */
-    if (!vp->flags.has_tag) {
+    if (!vp->da->flags.has_tag) {
         switch (vp->type) {
             case PW_TYPE_INTEGER:
             case PW_TYPE_BYTE:
             case PW_TYPE_SHORT:
                 /* skip if we have flags */
-                if (vp->flags.has_value) break;
+                if (vp->da->flags.has_value) break;
                 /* return as int */
                 return json_object_new_int(vp->vp_integer);
             break;
@@ -66,7 +66,7 @@ json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp) {
     }
 
     /* keep going if not set above */
-    switch (vp->type) {
+    switch (vp->da->type) {
         case PW_TYPE_STRING:
             /* return string value */
             return json_object_new_string(vp->vp_strvalue);
