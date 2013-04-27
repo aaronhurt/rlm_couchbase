@@ -29,12 +29,11 @@ Example from an Aerohive Wireless Access Point:
       "lastUpdated": "Apr 23 2013 18:05:52 CDT"
     }
 
-This module was built and tested against freeradius-server master branch as of 04/26/2013.
 
 To Use
 ------
 
-Pull freeradius release_3_0_0_beta0 and checkout this module under src/modules.  Then enable and compile as usual.
+Pull freeradius-server master and clone this module under src/modules.  Then enable and compile as usual.
 You will need libcouchbase >= 2.0 installed with a valid libio module.  You will also need the json-c library installed and available.
 
 Configuration
@@ -86,8 +85,10 @@ Configuration
         }"
     }
 
-Disclaimer
-----------
+Notes
+-----
 
 This module was tested to handle thousands of radius requests in a short period of time from multiple (hundreds) of Aerohive Access Points pointing
 to a freeradius installation for accounting.  YMMV.
+
+This module was built and tested against freeradius-server master branch as of the latest commit to this branch.
