@@ -124,7 +124,7 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
     int status = 0;                     /* account status type */
     int docfound = 0;                   /* document get toggle */
     lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
-    json_object *json, *jval;           /* json objects */
+    json_object *json;                  /* json object */
     enum json_tokener_error json_error = json_tokener_success;  /* json parse error */
 
     /* assert packet as not null*/
@@ -228,11 +228,19 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
                 /* add to json object */
                 json_object_object_add(json, "stopTimestamp", couchbase_value_pair_to_json_object(vp));
             }
+            /* check start timestamp and adjust if needed */
+            couchbase_check_start_timestamp(json, request->packet->vps);
+        case PW_STATUS_ALIVE:
+            /* check start timestamp and adjust if needed */
+            couchbase_check_start_timestamp(json, request->packet->vps);
+        break;
+        default:
+            /* do nothing */
         break;
     }
 
     /* loop through pairs */
-    for(vp = request->packet->vps; vp; vp = vp->next) {
+    for (vp = request->packet->vps; vp; vp = vp->next) {
         /* map attribute to element */
         if (couchbase_attribute_to_element(vp->da->name, p->map_object, &element) == 0) {
             /* debug */
@@ -241,17 +249,6 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
             json_object_object_add(json, element, couchbase_value_pair_to_json_object(vp));
         }
     }
-
-    ///* compute a start time if we don't already have one on update and stop events */
-    //if (status == PW_STATUS_STOP || status == PW_STATUS_ALIVE) {
-    //    /* get our current start timestamp from our json body */
-    //    if (json_object_object_get_ex(json, "startTimestamp", &jval) {
-    //        /* get and check value of current start timestamp */
-    //        if (strcmp(json_object_get_string(jval), "null") == 0) {
-    //            /* parse current timestamp in json body */
-    //        }
-    //    }
-    //}
 
     /* make sure we have enough room in our document buffer */
     if ((unsigned int) json_object_get_string_len(json) > sizeof(document) - 1) {

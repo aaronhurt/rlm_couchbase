@@ -18,4 +18,6 @@ int couchbase_attribute_to_element(const char *name, json_object *map, void *att
 
 json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp);
 
+int couchbase_check_start_timestamp(json_object *json, VALUE_PAIR *vps);
+
 #endif /* _UTIL_H */
