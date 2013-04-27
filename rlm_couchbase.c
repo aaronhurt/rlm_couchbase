@@ -116,16 +116,16 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
 /* write accounting data to couchbase */
 static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *request) {
     rlm_couchbase_t *p = instance;      /* our module instance */
+    const DICT_ATTR *da;                /* radius dictionary attribute */
+    VALUE_PAIR *vp;                     /* radius value pair linked list */
     char key[MAX_KEY_SIZE];             /* our document key */
     char document[MAX_VALUE_SIZE];      /* our document body */
-    char attribute[MAX_KEY_SIZE];       /* mapped radius attribute */
+    char element[MAX_KEY_SIZE];         /* mapped radius attribute to element name */
     int status = 0;                     /* account status type */
     int docfound = 0;                   /* document get toggle */
     lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
     json_object *json;                  /* json object */
     enum json_tokener_error json_error = json_tokener_success;  /* json parse error */
-    VALUE_PAIR *vp;                     /* radius value pair linked list */
-    DICT_ATTR *da;                      /* radius dictionary attribute */
 
     /* assert packet as not null*/
     rad_assert(request->packet != NULL);
@@ -233,12 +233,12 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
 
     /* loop through pairs */
     for(vp = request->packet->vps; vp; vp = vp->next) {
-        /* map attribute */
-        if (couchbase_attribute_to_element(vp->da->name, p->map_object, &attribute) == 0) {
+        /* map attribute to element */
+        if (couchbase_attribute_to_element(vp->da->name, p->map_object, &element) == 0) {
             /* debug */
-            RDEBUG("mapped attribute %s => %s", vp->da->name, attribute);
-            /* add to json object with mapped attribute name */
-            json_object_object_add(json, attribute, couchbase_value_pair_to_json_object(vp));
+            RDEBUG("mapped attribute %s => %s", vp->da->name, element);
+            /* add to json object with mapped name */
+            json_object_object_add(json, element, couchbase_value_pair_to_json_object(vp));
         }
     }
 

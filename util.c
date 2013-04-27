@@ -8,12 +8,12 @@ RCSID("$Id$")
 #include "util.h"
 
 /* map free radius attribute to user defined json element name */
-int couchbase_attribute_to_element(const char *name, json_object *map, void *attribute) {
+int couchbase_attribute_to_element(const char *name, json_object *map, void *buf) {
     json_object *jval;      /* json object */
     int length;             /* json value length */
 
-    /* clear attribute */
-    memset((char *) attribute, 0, MAX_KEY_SIZE);
+    /* clear buffer */
+    memset((char *) buf, 0, MAX_KEY_SIZE);
 
     /* attempt to map attribute */
     if (json_object_object_get_ex(map, name, &jval)) {
@@ -26,8 +26,8 @@ int couchbase_attribute_to_element(const char *name, json_object *map, void *att
             /* return fail */
             return -1;
         } else {
-            /* copy string value to attribute */
-            strncpy(attribute, json_object_get_string(jval), length);
+            /* copy string value to buffer */
+            strncpy(buf, json_object_get_string(jval), length);
             /* return good */
             return 0;
         }

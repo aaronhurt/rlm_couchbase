@@ -14,6 +14,6 @@ TGT_LDLIBS	:= @mod_ldflags@ -lcouchbase -ljson
 
 install: $(R)$(raddbdir)/couchbase.sample
 
-$(R)$(raddbdir)/mods-available/couchbase.sample: src/modules/rlm_couchbase/couchbase.sample
+$(R)$(raddbdir)/couchbase.sample: src/modules/rlm_couchbase/couchbase.sample
 	@$(INSTALL) -m 755 src/modules/rlm_couchbase/couchbase.sample $(R)$(raddbdir)/couchbase.sample
 
