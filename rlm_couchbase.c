@@ -242,16 +242,16 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
         }
     }
 
-    /* compute a start time if we don't already have one on update and stop events */
-    if (status == PW_STATUS_STOP || status == PW_STATUS_ALIVE) {
-        /* get our current start timestamp from our json body */
-        if (json_object_object_get_ex(json, "startTimestamp", &jval) {
-            /* get and check value of current start timestamp */
-            if (strcmp(json_object_get_string(jval), "null") == 0) {
-                /* parse current timestamp in json body */
-            }
-        }
-    }
+    ///* compute a start time if we don't already have one on update and stop events */
+    //if (status == PW_STATUS_STOP || status == PW_STATUS_ALIVE) {
+    //    /* get our current start timestamp from our json body */
+    //    if (json_object_object_get_ex(json, "startTimestamp", &jval) {
+    //        /* get and check value of current start timestamp */
+    //        if (strcmp(json_object_get_string(jval), "null") == 0) {
+    //            /* parse current timestamp in json body */
+    //        }
+    //    }
+    //}
 
     /* make sure we have enough room in our document buffer */
     if ((unsigned int) json_object_get_string_len(json) > sizeof(document) - 1) {
