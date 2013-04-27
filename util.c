@@ -39,7 +39,9 @@ int couchbase_attribute_to_element(const char *name, json_object *map, void *att
     }
 }
 
-/* convert freeradius value/pair to json object */
+/* convert freeradius value/pair to json object
+ * basic structure taken from freeradius function
+ * vp_prints_value_json in src/lib/print.c */
 json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp) {
     char value[255];    /* radius attribute value */
 
@@ -61,6 +63,9 @@ json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp) {
             case PW_TYPE_INTEGER64:
                 /* return as 64 bit int */
                 return json_object_new_int64(vp->vp_integer64);
+            break;
+            default:
+                /* do nothing */
             break;
         }
     }
