@@ -12,8 +12,8 @@ TGT_LDLIBS	:= @mod_ldflags@ -lcouchbase -ljson
 # TODO: create man page
 #MAN		:= rlm_couchbase.8
 
-install: $(R)$(raddbdir)/mods-available/couchbase
+install: $(R)$(raddbdir)/couchbase.sample
 
-$(R)$(raddbdir)/mods-available/couchbase: src/modules/$(TARGETNAME)/couchbase.sample
-	@$(INSTALL) -m 755 src/modules/$(TARGETNAME)/couchbase.sample $(R)$(raddbdir)/mods-available/couchbase
+$(R)$(raddbdir)/mods-available/couchbase.sample: src/modules/rlm_couchbase/couchbase.sample
+	@$(INSTALL) -m 755 src/modules/rlm_couchbase/couchbase.sample $(R)$(raddbdir)/couchbase.sample
 
