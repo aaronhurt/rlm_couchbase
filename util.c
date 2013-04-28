@@ -48,26 +48,26 @@ json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp) {
 
     /* add this attribute/value pair to our json output */
     if (!vp->da->flags.has_tag) {
-        switch (vp->type) {
+        switch (vp->da->type) {
             case PW_TYPE_INTEGER:
             case PW_TYPE_BYTE:
             case PW_TYPE_SHORT:
                 /* skip if we have flags */
                 if (vp->da->flags.has_value) break;
                 /* debug */
-                DEBUG("rlm_couchbase: Assigning %s as integer", vp->da->name);
+                DEBUG("rlm_couchbase: assigning int/byte/short '%s' as integer", vp->da->name);
                 /* return as int */
                 return json_object_new_int(vp->vp_integer);
             break;
             case PW_TYPE_SIGNED:
                 /* debug */
-                DEBUG("rlm_couchbase: Assigning %s as integer", vp->da->name);
+                DEBUG("rlm_couchbase: assigning signed '%s' as integer", vp->da->name);
                 /* return as int */
                 return json_object_new_int(vp->vp_signed);
             break;
             case PW_TYPE_INTEGER64:
                 /* debug */
-                DEBUG("rlm_couchbase: Assigning %s as 64 bit integer", vp->da->name);
+                DEBUG("rlm_couchbase: assigning int64 '%s' as 64 bit integer", vp->da->name);
                 /* return as 64 bit int */
                 return json_object_new_int64(vp->vp_integer64);
             break;
@@ -81,12 +81,12 @@ json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp) {
     switch (vp->da->type) {
         case PW_TYPE_STRING:
             /* debug */
-            DEBUG("rlm_couchbase: Assigning %s as string", vp->da->name);
+            DEBUG("rlm_couchbase: assigning string '%s' as string", vp->da->name);
             /* return string value */
             return json_object_new_string(vp->vp_strvalue);
         default:
             /* debug */
-            DEBUG("rlm_couchbase: Assigning %s as string", vp->da->name);
+            DEBUG("rlm_couchbase: assigning unhandled '%s' as string", vp->da->name);
             /* get standard value */
             vp_prints_value(value, sizeof(value), vp, 0);
             /* return string value from above */
