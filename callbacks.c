@@ -22,14 +22,14 @@ void couchbase_store_callback(lcb_t instance, const void *cookie, lcb_storage_t 
         /* check buffer size */
         if (resp->v.v0.nkey > MAX_KEY_SIZE -1) {
             /* log error */
-            ERROR("rlm_couchbase: Key larger than MAX_KEY_SIZE (%d) - not showing", MAX_KEY_SIZE);
+            ERROR("rlm_couchbase: key larger than MAX_KEY_SIZE (%d) - not showing", MAX_KEY_SIZE);
         } else {
             /* clear key buff */
             memset(key, 0, sizeof(key));
             /* format key */
             strncpy(key, resp->v.v0.key, resp->v.v0.nkey);
             /* debugging */
-            DEBUG("rlm_couchbase: Stored key '%s' to Couchbase server", key);
+            DEBUG("rlm_couchbase: stored key '%s' to couchbase database", key);
         }
     } else {
         /* log error */
@@ -50,10 +50,10 @@ void couchbase_get_callback(lcb_t instance, const void *cookie, lcb_error_t erro
         /* check that we have enoug space in buffer */
         if (resp->v.v0.nbytes > MAX_VALUE_SIZE - 1) {
             /* log error */
-            ERROR("rlm_couchbase: Returned document larger than MAX_VALUE_SIZE (%d) - not copying", MAX_VALUE_SIZE);
+            ERROR("rlm_couchbase: returned document larger than MAX_VALUE_SIZE (%d) - not copying", MAX_VALUE_SIZE);
         } else {
             /* debugging */
-            DEBUG("rlm_couchbase: Got %zu bytes from Couchbase server", resp->v.v0.nbytes);
+            DEBUG("rlm_couchbase: got %zu bytes from couchbase database", resp->v.v0.nbytes);
             /* store document data */
             strncpy((char *) cookie, resp->v.v0.bytes, resp->v.v0.nbytes);
         }

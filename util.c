@@ -22,7 +22,7 @@ int couchbase_attribute_to_element(const char *name, json_object *map, void *buf
         /* check buffer size */
         if (length > MAX_KEY_SIZE -1) {
             /* oops ... this value is bigger than our buffer ... error out */
-            ERROR("rlm_couchbase: Error, json value larger than MAX_KEY_SIZE - %d", MAX_KEY_SIZE);
+            ERROR("rlm_couchbase: json map value larger than MAX_KEY_SIZE - %d", MAX_KEY_SIZE);
             /* return fail */
             return -1;
         } else {
@@ -34,7 +34,7 @@ int couchbase_attribute_to_element(const char *name, json_object *map, void *buf
     }
 
     /* debugging */
-    DEBUG("rlm_couchbase: Skipping attribute with no map entry - %s", name);
+    DEBUG("rlm_couchbase: skipping attribute with no map entry - %s", name);
 
     /* default return */
     return -1;
