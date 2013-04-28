@@ -122,7 +122,7 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
     int status = 0;                     /* account status type */
     int docfound = 0;                   /* document get toggle */
     lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
-    json_object *json, *jval;           /* json objects */
+    json_object *json;                  /* json objects */
     enum json_tokener_error json_error = json_tokener_success;  /* json parse error */
 
     /* assert packet as not null*/

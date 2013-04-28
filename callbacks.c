@@ -29,7 +29,7 @@ void couchbase_store_callback(lcb_t instance, const void *cookie, lcb_storage_t 
             /* format key */
             strncpy(key, resp->v.v0.key, resp->v.v0.nkey);
             /* debugging */
-            DEBUG("rlm_couchbase: Stored key %s to Couchbase server", key);
+            DEBUG("rlm_couchbase: Stored key '%s' to Couchbase server", key);
         }
     } else {
         /* log error */
