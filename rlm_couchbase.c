@@ -50,7 +50,7 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
 
     /* fail on bad config */
     if (cf_section_parse(conf, inst, module_config) < 0) {
-        radlog(L_ERR, "rlm_couchbase: Failed to parse config!");
+        ERROR("rlm_couchbase: Failed to parse config!");
         return -1;
     }
 
@@ -60,11 +60,9 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     /* check error */
     if (json_error != json_tokener_success) {
         /* log error */
-        radlog(L_ERR, "rlm_couchbase: Failed to parse attribute map: %s", json_tokener_error_desc(json_error));
-
+        ERROR("rlm_couchbase: Failed to parse attribute map: %s", json_tokener_error_desc(json_error));
         /* cleanup json object */
         json_object_put(inst->map_object);
-
         /* fail */
         return -1;
     }
@@ -87,7 +85,7 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
 
     /* check error status */
     if (cb_error != LCB_SUCCESS) {
-        radlog(L_ERR, "rlm_couchbase: Failed to create libcouchbase instance: %s", lcb_strerror(NULL, cb_error));
+        ERROR("rlm_couchbase: Failed to create libcouchbase instance: %s", lcb_strerror(NULL, cb_error));
         return -1;
     }
 
@@ -96,7 +94,7 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
 
     /* initiate connection */
     if ((cb_error = lcb_connect(inst->cb_instance)) != LCB_SUCCESS) {
-        radlog(L_ERR, "rlm_couchbase: Failed to initiate connect: %s", lcb_strerror(NULL, cb_error));
+        ERROR("rlm_couchbase: Failed to initiate connect: %s", lcb_strerror(NULL, cb_error));
         lcb_destroy(inst->cb_instance);
         return -1;
     }
@@ -124,7 +122,7 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
     int status = 0;                     /* account status type */
     int docfound = 0;                   /* document get toggle */
     lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
-    json_object *json;                  /* json object */
+    json_object *json, *jval;           /* json objects */
     enum json_tokener_error json_error = json_tokener_success;  /* json parse error */
 
     /* assert packet as not null*/
@@ -136,7 +134,7 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
         status = vp->vp_integer;
     } else {
         /* log error */
-        radlog(L_ERR, "rlm_couchbase: Could not find status type in packet.");
+        RERROR("rlm_couchbase: Could not find status type in packet.");
         /* return */
         return RLM_MODULE_INVALID;
     }
@@ -191,7 +189,7 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
                         docfound = 1;
                     } else {
                         /* log error */
-                        radlog(L_ERR, "rlm_couchbase: Failed to parse couchbase document: %s", json_tokener_error_desc(json_error));
+                        RERROR("rlm_couchbase: Failed to parse couchbase document: %s", json_tokener_error_desc(json_error));
                         /* cleanup json object */
                         json_object_put(json);
                     }
@@ -200,7 +198,7 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
         }
     } else {
         /* log error */
-        radlog(L_ERR, "rlm_couchbase: Could not find key attribute (%s) in packet!", p->key);
+        RERROR("rlm_couchbase: Could not find key attribute (%s) in packet!", p->key);
         /* return */
         return RLM_MODULE_INVALID;
     }
@@ -229,10 +227,10 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
                 json_object_object_add(json, "stopTimestamp", couchbase_value_pair_to_json_object(vp));
             }
             /* check start timestamp and adjust if needed */
-            couchbase_check_start_timestamp(json, request->packet->vps);
+            couchbase_ensure_start_timestamp(json, request->packet->vps);
         case PW_STATUS_ALIVE:
             /* check start timestamp and adjust if needed */
-            couchbase_check_start_timestamp(json, request->packet->vps);
+            couchbase_ensure_start_timestamp(json, request->packet->vps);
         break;
         default:
             /* do nothing */
@@ -253,7 +251,7 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
     /* make sure we have enough room in our document buffer */
     if ((unsigned int) json_object_get_string_len(json) > sizeof(document) - 1) {
         /* this isn't good */
-        radlog(L_ERR, "rlm_couchbase: Could not write json document.  Insufficient buffer space!");
+        RERROR("rlm_couchbase: Could not write json document.  Insufficient buffer space!");
         /* free json output */
         json_object_put(json);
         /* return */
@@ -297,7 +295,7 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
 
         /* check return */
         if (cb_error != LCB_SUCCESS) {
-            radlog(L_ERR, "rlm_couchbase: Failed to store document (%s): %s", key, lcb_strerror(NULL, cb_error));
+            RERROR("rlm_couchbase: Failed to store document (%s): %s", key, lcb_strerror(NULL, cb_error));
         }
     }
 
