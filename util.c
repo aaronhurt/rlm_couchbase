@@ -85,6 +85,7 @@ json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp) {
     }
 }
 
+/* check current value of start timestamp in json body and update if needed */
 int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
     json_object *jval;      /* json object value */
     struct tm tm;           /* struct to hold event time */
