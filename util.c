@@ -100,7 +100,7 @@ int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
     json_object *jval;      /* json object value */
     struct tm tm;           /* struct to hold event time */
     time_t ts = 0;          /* values to hold time in seconds */
-    size_t length           /* length of formatted date */
+    size_t length;          /* length of formatted date */
     VALUE_PAIR *vp;         /* values to hold value pairs */
     char value[255];        /* store radius attribute values and our timestamp */
 
