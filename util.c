@@ -99,40 +99,33 @@ json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp) {
 int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
     json_object *jval;      /* json object value */
     struct tm tm;           /* struct to hold event time */
-    struct tm *tp;          /* struct pointer to hold caclulated start time */
     time_t ts = 0;          /* values to hold time in seconds */
+    size_t length           /* length of formatted date */
     VALUE_PAIR *vp;         /* values to hold value pairs */
     char value[255];        /* store radius attribute values and our timestamp */
 
     /* get our current start timestamp from our json body */
-    if ((json_object_object_get_ex(json, "startTimestamp", &jval)) == 0) {
+    if (json_object_object_get_ex(json, "startTimestamp", &jval) == 0 && strcmp(json_object_get_string(jval), "null") != 0) {
+        /* debugging */
+        DEBUG("rlm_couchbase: start timestamp looks good - nothing to do");
+        /* already set */
+        return 0;
+    } else {
         /* debugging */
         DEBUG("rlm_couchbase: failed to find start timestamp in current json body");
         /* return */
         return -1;
     }
 
-    /* check the value */
-    if (strcmp(json_object_get_string(jval), "null") != 0) {
-        /* debugging */
-        DEBUG("rlm_couchbase: start timestamp looks good - nothing to do");
-        /* already not null - nothing else to do */
-        return 0;
-    }
-
     /* get current event timestamp */
     if ((vp = pairfind(vps, PW_EVENT_TIMESTAMP, 0, TAG_ANY)) != NULL) {
-        /* get value */
-        vp_prints_value(value, sizeof(value), vp, 0);
-        /* parse timestamp - Apr 27 2013 13:02:29 CDT */
-        if (strptime(value, "%b %d %Y %T %Z", &tm) != NULL) {
-            /* get unix timestamp - seconds since the epoc */
-            ts = mktime(&tm);
-        }
+        ts = vp->vp_date;
+    } else {
+        /* debugging */
+        DEBUG("rlm_couchbase: failed to find event timestamp in current request");
+        /* return */
+        return -1;
     }
-
-    /* check for valid ts */
-    if (ts < 1) return -1;
 
     /* clear value */
     memset(value, sizeof(value), 0);
@@ -141,14 +134,20 @@ int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
     if ((vp = pairfind(vps, PW_ACCT_SESSION_TIME, 0, TAG_ANY)) != NULL) {
         /* calculate diff */
         ts = (ts - vp->vp_integer);
-        /* store offset in time struct */
-        tp = localtime(&ts);
         /* calculate start time */
-        strftime(value, sizeof(value), "%b %d %Y %T CDT", tp);
-        /* debugging */
-        DEBUG("rlm_couchbase: calculated start timestamp: %s", value);
-        /* store new value in json body */
-        json_object_object_add(json, "startTimestamp", json_object_new_string(value));
+        length = strftime(value, sizeof(value), "%b %e %Y %H:%M:%S %Z", localtime_r(&ts, &tm));
+        /* check length */
+        if (length > 0) {
+            /* debugging */
+            DEBUG("rlm_couchbase: calculated start timestamp: %s", value);
+            /* store new value in json body */
+            json_object_object_add(json, "startTimestamp", json_object_new_string(value));
+        } else {
+            /* debugging */
+            DEBUG("rlm_couchbase: failed to format calculated timestamp");
+            /* return */
+            return -1;
+        }
     }
 
     /* default return */
