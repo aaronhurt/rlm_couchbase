@@ -205,13 +205,15 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
 
     /* start json document if needed */
     if (docfound != 1) {
+        /* debugging */
+        RDEBUG("document not found - creating new json document");
         json = json_object_new_object();
         /* initialize start and stop times ... ensure we always have these elements */
         json_object_object_add(json, "startTimestamp", json_object_new_string("null"));
         json_object_object_add(json, "stopTimestamp", json_object_new_string("null"));
     }
 
-    /* status specific replacements */
+    /* status specific replacements for start/stop time */
     switch (status) {
         case PW_STATUS_START:
             /* add start time */
@@ -237,7 +239,7 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
         break;
     }
 
-    /* loop through pairs */
+    /* loop through pairs and add to json document */
     for (vp = request->packet->vps; vp; vp = vp->next) {
         /* map attribute to element */
         if (couchbase_attribute_to_element(vp->da->name, p->map_object, &element) == 0) {

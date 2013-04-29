@@ -105,20 +105,24 @@ int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
     char value[255];        /* store radius attribute values and our timestamp */
 
     /* get our current start timestamp from our json body */
-    if (json_object_object_get_ex(json, "startTimestamp", &jval) == 0 && strcmp(json_object_get_string(jval), "null") != 0) {
-        /* debugging */
-        DEBUG("rlm_couchbase: start timestamp looks good - nothing to do");
-        /* already set */
-        return 0;
-    } else {
-        /* debugging */
+    if (json_object_object_get_ex(json, "startTimestamp", &jval) == 0) {
+        /* debugging ... this shouldn't ever happen */
         DEBUG("rlm_couchbase: failed to find start timestamp in current json body");
         /* return */
         return -1;
     }
 
+    /* check the value */
+    if (strcmp(json_object_get_string(jval), "null") != 0) {
+        /* debugging */
+        DEBUG("rlm_couchbase: start timestamp looks good - nothing to do");
+        /* already set - nothing else to do */
+        return 0;
+    }
+
     /* get current event timestamp */
     if ((vp = pairfind(vps, PW_EVENT_TIMESTAMP, 0, TAG_ANY)) != NULL) {
+        /* get seconds value from attribute */
         ts = vp->vp_date;
     } else {
         /* debugging */
