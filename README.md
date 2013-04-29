@@ -71,7 +71,7 @@ Configuration
                 \"NAS-Port\": \"nasPort\", \
                 \"Called-Station-Id\": \"calledStationId\", \
                 \"Calling-Station-Id\": \"callingStationId\", \
-                \"FramedIPAddres\": \"framedIpAddress\", \
+                \"Framed-IP-Address\": \"framedIpAddress\", \
                 \"Nas-Port-Type\": \"nasPortType\", \
                 \"Connect-Info\": \"connectInfo\", \
                 \"Acct-Session-Time\": \"sessionTime\", \
