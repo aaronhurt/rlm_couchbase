@@ -66,6 +66,7 @@ void couchbase_get_callback(lcb_t instance, const void *cookie, lcb_error_t erro
         case LCB_KEY_ENOENT:
             /* only need an info message here */
             INFO("rlm_couchbase: (get_callback) %s (0x%x)", lcb_strerror(instance, error), error);
+        break;
         default:
             /* log error */
             ERROR("rlm_couchbase: (get_callback) %s (0x%x)", lcb_strerror(instance, error), error);
