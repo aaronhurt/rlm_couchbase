@@ -8,7 +8,7 @@ RCSIDH(util_h, "$Id$");
 #include <json/json.h>
 
 /* maximum size of a stored value */
-#define MAX_VALUE_SIZE 4096
+#define MAX_VALUE_SIZE 20480
 
 /* maximum length of a document key */
 #define MAX_KEY_SIZE 250

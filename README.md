@@ -45,13 +45,11 @@ Configuration
 
         ## couchbase host or hosts - multiple hosts should be semi-colon separated
         ## ports are optional if servers are listening on the standard port
-        host = "cb01-blargs.com:9091;cb02-blargs.com;cb03-blargs.com"
-
+        ## pool addresses may also be used
+        #host = "cb01-blargs.com:9091;cb02-blargs.com;cb03-blargs.com"
+        host ="http://cb01.blargs.com:8091/pools/;http://cb04.blargs.com:8091/pools/"
         ## couchbase bucket name
         bucket = "radius"
-
-        ## username for bucket
-        #user = "username"
 
         ## bucket password
         #pass = "password"
