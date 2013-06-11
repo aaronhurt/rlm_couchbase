@@ -16,6 +16,7 @@ RCSID("$Id$")
 /* configuration struct */
 typedef struct rlm_couchbase_t {
     const char *key;                /* document key */
+    const char *doctype;            /* value of 'docType' element name */
     const char *host;               /* couchbase connection host */
     const char *bucket;             /* couchbase bucket */
     const char *pass;               /* couchbase bucket password */
@@ -27,7 +28,8 @@ typedef struct rlm_couchbase_t {
 
 /* map config to internal variables */
 static const CONF_PARSER module_config[] = {
-    {"key", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, key), NULL, "Acct-Session-Id"},
+    {"key", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, key), NULL, "radacct_%{Acct-Session-Id}"},
+    {"doctype", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, doctype), NULL, "radacct"},
     {"host", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, host), NULL, "localhost"},
     {"bucket", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, bucket), NULL, "default"},
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
@@ -80,7 +82,6 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
 /* write accounting data to couchbase */
 static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *request) {
     rlm_couchbase_t *p = instance;      /* our module instance */
-    const DICT_ATTR *da;                /* radius dictionary attribute */
     VALUE_PAIR *vp;                     /* radius value pair linked list */
     char key[MAX_KEY_SIZE];             /* our document key */
     char document[MAX_VALUE_SIZE];      /* our document body */
@@ -118,16 +119,11 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
         return RLM_MODULE_FAIL;
     }
 
-    /* lookup document key attribute value */
-    da = dict_attrbyname(p->key);
-
-    /* look for document key attribute */
-    if ((vp = pairfind(request->packet->vps, da->attr, 0, TAG_ANY)) != NULL) {
-        /* store key */
-        vp_prints_value(key, sizeof(key), vp, 0);
+    /* attempt to build document key */
+    if (radius_xlat(key, sizeof(key), request, p->key, NULL, NULL) < 0) {
 
         /* debugging */
-        RDEBUG("found document key: '%s' => '%s'", vp->da->name, key);
+        RDEBUG("built document key: '%s' => '%s'", p->key, key);
 
         /* init cookie error status */
         cookie->jerr = json_tokener_success;
@@ -167,7 +163,9 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
         RDEBUG("document not found - creating new json document");
         /* create new json object */
         cookie->jobj = json_object_new_object();
-        /* initialize start and stop times ... ensure we always have these elements */
+        /* set 'docType' element for new document */
+        json_object_object_add(cookie->jobj, "docType", json_object_new_string(p->doctype));
+        /* set start and stop times ... ensure we always have these elements */
         json_object_object_add(cookie->jobj, "startTimestamp", json_object_new_string("null"));
         json_object_object_add(cookie->jobj, "stopTimestamp", json_object_new_string("null"));
     }
