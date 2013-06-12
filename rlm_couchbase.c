@@ -121,7 +121,13 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
 
     /* attempt to build document key */
     if (radius_xlat(key, sizeof(key), request, p->key, NULL, NULL) < 0) {
-
+        /* log error */
+        RERROR("rlm_couchbase: could not find key attribute (%s) in packet!", p->key);
+        /* free cookie */
+        free(cookie);
+        /* return */
+        return RLM_MODULE_INVALID;
+    } else {
         /* debugging */
         RDEBUG("built document key: '%s' => '%s'", p->key, key);
 
@@ -148,13 +154,6 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
                 RDEBUG("parsed json body from couchbase: %s", json_object_to_json_string(cookie->jobj));
             }
         }
-    } else {
-        /* log error */
-        RERROR("rlm_couchbase: could not find key attribute (%s) in packet!", p->key);
-        /* free cookie */
-        free(cookie);
-        /* return */
-        return RLM_MODULE_INVALID;
     }
 
     /* start json document if needed */
