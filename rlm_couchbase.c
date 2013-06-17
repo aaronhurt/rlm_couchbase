@@ -79,8 +79,26 @@ static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     return 0;
 }
 
+/* authentiacte given username and password against couchbase */
+static rlm_rcode_t rlm_couchbase_authenticate(UNUSED void *instance, UNUSED REQUEST *request) {
+    /* return okay */
+    return RLM_MODULE_OK;
+}
+
+/* authorize users via couchbase */
+static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST *request) {
+    /* return handled */
+    return RLM_MODULE_HANDLED;
+}
+
+/* misc data manipulation before recording accounting data */
+static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, UNUSED REQUEST *request) {
+    /* nothing here yet ... return noop */
+    return RLM_MODULE_NOOP;
+}
+
 /* write accounting data to couchbase */
-static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *request) {
+static rlm_rcode_t rlm_couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *request) {
     rlm_couchbase_t *p = instance;      /* our module instance */
     VALUE_PAIR *vp;                     /* radius value pair linked list */
     char key[MAX_KEY_SIZE];             /* our document key */
@@ -246,8 +264,18 @@ static rlm_rcode_t couchbase_accounting(UNUSED void *instance, UNUSED REQUEST *r
     return RLM_MODULE_OK;
 }
 
+/* check for multiple simultaneous active sessions */
+static rlm_rcode_t rlm_couchbase_checksimul(UNUSED void *instance, UNUSED REQUEST *request)
+{
+    /* nothing yet ... always set to 0 */
+    request->simul_count = 0;
+
+    /* return okay */
+    return RLM_MODULE_OK;
+}
+
 /* free any memory we allocated */
-static int couchbase_detach(UNUSED void *instance)
+static int rlm_couchbase_detach(UNUSED void *instance)
 {
     rlm_couchbase_t *p = instance;  /* instance struct */
 
@@ -265,19 +293,19 @@ static int couchbase_detach(UNUSED void *instance)
 module_t rlm_couchbase = {
     RLM_MODULE_INIT,
     "couchbase",
-    RLM_TYPE_THREAD_SAFE,       /* type */
+    RLM_TYPE_THREAD_SAFE,           /* type */
     sizeof(rlm_couchbase_t),
     module_config,
-    couchbase_instantiate,      /* instantiation */
-    couchbase_detach,           /* detach */
+    rlm_couchbase_instantiate,      /* instantiation */
+    rlm_couchbase_detach,           /* detach */
     {
-        NULL,                   /* authentication */
-        NULL,                   /* authorization */
-        NULL,                   /* preaccounting */
-        couchbase_accounting,   /* accounting */
-        NULL,                   /* checksimul */
-        NULL,                   /* pre-proxy */
-        NULL,                   /* post-proxy */
-        NULL                    /* post-auth */
+        rlm_couchbase_authenticate, /* authentication */
+        rlm_couchbase_authorize,    /* authorization */
+        rlm_couchbase_preacct,      /* preaccounting */
+        rlm_couchbase_accounting,   /* accounting */
+        rlm_couchbase_checksimul,   /* checksimul */
+        NULL,                       /* pre-proxy */
+        NULL,                       /* post-proxy */
+        NULL                        /* post-auth */
     },
 };
