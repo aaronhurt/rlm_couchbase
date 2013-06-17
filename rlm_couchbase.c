@@ -39,7 +39,7 @@ static const CONF_PARSER module_config[] = {
 };
 
 /* initialize couchbase connection */
-static int couchbase_instantiate(CONF_SECTION *conf, void *instance) {
+static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     lcb_error_t cb_error = LCB_SUCCESS;                         /* couchbase error status */
     enum json_tokener_error json_error = json_tokener_success;  /* json parse error */
 
@@ -108,7 +108,7 @@ static rlm_rcode_t rlm_couchbase_accounting(UNUSED void *instance, UNUSED REQUES
     int docfound = 0;                   /* document get toggle */
     lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
 
-    /* assert packet as not null*/
+    /* assert packet as not null */
     rad_assert(request->packet != NULL);
 
     /* sanity check */
