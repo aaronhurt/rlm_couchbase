@@ -27,6 +27,8 @@ couchbase {
             \"Acct-Status-Type\": \"lastStatus\", \
             \"Acct-Authentic\": \"authentic\", \
             \"User-Name\": \"userName\", \
+            \"Stripped-User-Name\": \"strippedUserName\", \
+            \"Realm\": \"realm\", \
             \"NAS-IP-Address\": \"nasIpAddress\", \
             \"NAS-Identifier\": \"nasIdentifier\", \
             \"NAS-Port\": \"nasPort\", \

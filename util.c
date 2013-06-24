@@ -159,18 +159,25 @@ int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
 }
 
 /* split username and realm from passed user name string */
-char *couchbase_split_user_realm(char *instring, char *outstring, size_t size, char **realm) {
-    char *ptr = NULL;
-    *realm = NULL;
+char *couchbase_split_user_realm(const char *instring, char *outstring, size_t size, char **realm) {
+    char *ptr = NULL;   /* position pointer */
+    *realm = NULL;      /* realm portion */
+
+    /* copy input to output and ensure null termination */
     *(stpncpy(outstring, instring, (size -1))) = '\0';
-    if (ptr = strstr(outstring, "\\")) {
+
+    /* check for realm prefix */
+    if ((ptr = strstr(outstring, "\\")) != NULL) {
         *realm = outstring;
         *ptr = '\0';
         outstring = ptr + 1;
     }
-    else if (ptr = strstr(outstring, "@")) {
+    /* check for realm suffix */
+    else if ((ptr = strstr(outstring, "@")) != NULL) {
         *ptr = '\0';
         *realm = ptr + 1;
     }
+
+    /* return username without realm */
     return outstring;
 }

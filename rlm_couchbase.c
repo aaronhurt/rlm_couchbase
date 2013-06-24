@@ -91,32 +91,56 @@ static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST
     char vpath[256], docid[256];    /* view path/filter and document id */
     cookie_t *cookie;               /* cookie return struct */
 
-
-
-    /* return handled */
+    // /* return handled */
     return RLM_MODULE_HANDLED;
 }
 
 /* misc data manipulation before recording accounting data */
 static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, UNUSED REQUEST *request) {
-    VALUE_PAIR *vp;         /* radius value pair linked list */
-    char *realm, *uname;    /* username and realm containers */
-    size_t size;            /* size of user name string */
+    VALUE_PAIR *vp;                             /* radius value pair linked list */
+    char *realm = NULL, *uname = NULL, *buff;   /* username and realm containers */
+    size_t size;                                /* size of user name string */
 
     /* assert packet as not null */
     rad_assert(request->packet != NULL);
 
-    /* get user string */
-    vp = pairfind(request->packet->vps, PW_USER_NAME, 0, TAG_ANY)) != NULL) {
-        /* get length */
-        size = strlen(vp->vp_strvalue);
-        /* allocate and initialize uname */
-        *uname = calloc(1, size);
-        /* pass to our split function */
-        couchbase_split_user_realm(vp->vp_strvalue, uname, size, realm);
+    /* check if stripped-user-name already set */
+    if (pairfind(request->packet->vps, PW_STRIPPED_USER_NAME, 0, TAG_ANY) != NULL) {
+        /* already set - do nothing */
+        return RLM_MODULE_NOOP;
     }
 
-    /* nothing here yet ... return noop */
+    /* get user string */
+    if ((vp = pairfind(request->packet->vps, PW_USER_NAME, 0, TAG_ANY)) != NULL) {
+        /* get length */
+        size = (strlen(vp->vp_strvalue) + 1);
+        /* allocate and initialize buffer */
+        buff = calloc(1, size);
+        /* pass to our split function */
+        uname = couchbase_split_user_realm(vp->vp_strvalue, buff, size, &realm);
+
+        /* check uname and set if needed */
+        if (uname != NULL) {
+            pairmake_packet("Stripped-User-Name", uname, T_OP_SET);
+            /* debugging */
+            RDEBUG("Stripped-User-Name => %s", uname);
+        }
+
+        /* check realm and set if needed */
+        if (realm != NULL) {
+            pairmake_packet("Realm", realm, T_OP_SET);
+            /* debugging */
+            RDEBUG("Realm => %s", realm);
+        }
+
+        /* free uname */
+        free(buff);
+
+        /* return okay */
+        return RLM_MODULE_OK;
+    }
+
+    /* return noop */
     return RLM_MODULE_NOOP;
 }
 
