@@ -44,6 +44,5 @@ couchbase {
             \"Acct-Output-Gigawords\": \"outputGigawords\", \
             \"Event-Timestamp\": \"lastUpdated\" \
     }"
-
 }
 

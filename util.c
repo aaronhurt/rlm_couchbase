@@ -132,7 +132,7 @@ int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
     }
 
     /* clear value */
-    memset(value, sizeof(value), 0);
+    memset(value, 0, sizeof(value));
 
     /* get elapsed session time */
     if ((vp = pairfind(vps, PW_ACCT_SESSION_TIME, 0, TAG_ANY)) != NULL) {
@@ -156,4 +156,21 @@ int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
 
     /* default return */
     return 0;
+}
+
+/* split username and realm from passed user name string */
+char *couchbase_split_user_realm(char *instring, char *outstring, size_t size, char **realm) {
+    char *ptr = NULL;
+    *realm = NULL;
+    *(stpncpy(outstring, instring, (size -1))) = '\0';
+    if (ptr = strstr(outstring, "\\")) {
+        *realm = outstring;
+        *ptr = '\0';
+        outstring = ptr + 1;
+    }
+    else if (ptr = strstr(outstring, "@")) {
+        *ptr = '\0';
+        *realm = ptr + 1;
+    }
+    return outstring;
 }

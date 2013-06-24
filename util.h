@@ -20,4 +20,6 @@ json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp);
 
 int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps);
 
+char *couchbase_split_user_realm(char *instring, char *outstring, size_t size, char **realm);
+
 #endif /* _UTIL_H */

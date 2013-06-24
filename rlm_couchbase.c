@@ -49,6 +49,7 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     /* fail on bad config */
     if (cf_section_parse(conf, inst, module_config) < 0) {
         ERROR("rlm_couchbase: failed to parse config!");
+        /* fail */
         return -1;
     }
 
@@ -79,20 +80,42 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     return 0;
 }
 
-/* authentiacte given username and password against couchbase */
+/* authenticate given username and password - we shouldn't handle this */
 static rlm_rcode_t rlm_couchbase_authenticate(UNUSED void *instance, UNUSED REQUEST *request) {
-    /* return okay */
-    return RLM_MODULE_OK;
+    /* return noop */
+    return RLM_MODULE_NOOP;
 }
 
 /* authorize users via couchbase */
 static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST *request) {
+    char vpath[256], docid[256];    /* view path/filter and document id */
+    cookie_t *cookie;               /* cookie return struct */
+
+
+
     /* return handled */
     return RLM_MODULE_HANDLED;
 }
 
 /* misc data manipulation before recording accounting data */
 static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, UNUSED REQUEST *request) {
+    VALUE_PAIR *vp;         /* radius value pair linked list */
+    char *realm, *uname;    /* username and realm containers */
+    size_t size;            /* size of user name string */
+
+    /* assert packet as not null */
+    rad_assert(request->packet != NULL);
+
+    /* get user string */
+    vp = pairfind(request->packet->vps, PW_USER_NAME, 0, TAG_ANY)) != NULL) {
+        /* get length */
+        size = strlen(vp->vp_strvalue);
+        /* allocate and initialize uname */
+        *uname = calloc(1, size);
+        /* pass to our split function */
+        couchbase_split_user_realm(vp->vp_strvalue, uname, size, realm);
+    }
+
     /* nothing here yet ... return noop */
     return RLM_MODULE_NOOP;
 }
