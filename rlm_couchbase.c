@@ -48,6 +48,9 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     /* build instance */
     rlm_couchbase_t *inst = instance;
 
+    /* debugging */
+    DEBUG("rlm_couchbase: in instantiate ...");
+
     /* fail on bad config */
     if (cf_section_parse(conf, inst, module_config) < 0) {
         ERROR("rlm_couchbase: failed to parse config!");
@@ -491,6 +494,9 @@ static rlm_rcode_t rlm_couchbase_checksimul(UNUSED void *instance, UNUSED REQUES
 /* free any memory we allocated */
 static int rlm_couchbase_detach(UNUSED void *instance) {
     rlm_couchbase_t *p = instance;  /* instance struct */
+
+    /* debugging */
+    DEBUG("rlm_couchbase: in detach ...");
 
     /* free map object */
     json_object_put(p->map_object);
