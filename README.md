@@ -6,32 +6,32 @@ Different status types (start/stop/update) are merged into a single document for
 
 Example from an Aerohive Wireless Access Point:
 
-  {
-     "docType": "radacct",
-     "startTimestamp": "Jun 24 2013 17:22:06 CDT",
-     "connectInfo": "11ng",
-     "stopTimestamp": "Jun 24 2013 17:22:26 CDT",
-     "sessionId": "5176C004-000018C0",
-     "lastStatus": 2,
-     "authentic": 1,
-     "userName": "DOMAIN\\barney",
-     "nasIpAddress": "1.2.3.4",
-     "nasIdentifier": "ap1.blargs.net",
-     "nasPort": 0,
-     "calledStationId": "08-EA-44-3D-AF-94:ENA-WIFI",
-     "framedIpAddress": "1.2.3.5",
-     "callingStationId": "F0-D1-A9-78-8E-F5",
-     "sessionTime": 20,
-     "inputPackets": 321,
-     "inputOctets": 42074,
-     "inputGigawords": 0,
-     "outputOctets": 9787,
-     "outputGigawords": 0,
-     "outputPackets": 64,
-     "lastUpdated": "Jun 24 2013 17:22:26 CDT",
-     "strippedUserName": "barney",
-     "realm": "DOMAIN"
-  }
+    {
+       "docType": "radacct",
+       "startTimestamp": "Jun 24 2013 17:22:06 CDT",
+       "connectInfo": "11ng",
+       "stopTimestamp": "Jun 24 2013 17:22:26 CDT",
+       "sessionId": "5176C004-000018C0",
+       "lastStatus": 2,
+       "authentic": 1,
+       "userName": "DOMAIN\\barney",
+       "nasIpAddress": "1.2.3.4",
+       "nasIdentifier": "ap1.blargs.net",
+       "nasPort": 0,
+       "calledStationId": "08-EA-44-3D-AF-94:ENA-WIFI",
+       "framedIpAddress": "1.2.3.5",
+       "callingStationId": "F0-D1-A9-78-8E-F5",
+       "sessionTime": 20,
+       "inputPackets": 321,
+       "inputOctets": 42074,
+       "inputGigawords": 0,
+       "outputOctets": 9787,
+       "outputGigawords": 0,
+       "outputPackets": 64,
+       "lastUpdated": "Jun 24 2013 17:22:26 CDT",
+       "strippedUserName": "barney",
+       "realm": "DOMAIN"
+    }
 
 The module is also capable of authorizing users via documents stored in couchbase.  The document keys should be returned via a simple view like the following:
 
