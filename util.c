@@ -10,13 +10,13 @@ RCSID("$Id$")
 /* map free radius attribute to user defined json element name */
 int couchbase_attribute_to_element(const char *name, json_object *map, void *buf) {
     json_object *jval;      /* json object */
-    int length;             /* json value length */
 
     /* clear buffer */
     memset((char *) buf, 0, MAX_KEY_SIZE);
 
     /* attempt to map attribute */
     if (json_object_object_get_ex(map, name, &jval)) {
+        int length;     /* json value length */
         /* get value length */
         length = json_object_get_string_len(jval);
         /* check buffer size */

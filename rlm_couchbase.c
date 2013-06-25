@@ -82,24 +82,17 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     return 0;
 }
 
-
-/* authenticate given username and password - we shouldn't handle this */
-static rlm_rcode_t rlm_couchbase_authenticate(UNUSED void *instance, UNUSED REQUEST *request) {
-    /* return noop */
-    return RLM_MODULE_NOOP;
-}
-
 /* authorize users via couchbase */
 static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST *request) {
-    rlm_couchbase_t *p = instance;              /* our module instance */
-    char vpath[256], docid[256], error[512];    /* view path, document id and error buffer */
-    unsigned int length;                        /* string length buffer */
-    const char *uname;                          /* pointer to user name */
-    VALUE_PAIR *vp;                             /* value pair pointer */
-    cookie_t *cookie;                           /* cookie return struct */
-    lcb_error_t cb_error = LCB_SUCCESS;         /* couchbase error holder */
-    json_object *json, *jval, *jval2;           /* json object holders */
-    json_object_iter iter;                      /* json object iterator */
+    rlm_couchbase_t *p = instance;          /* our module instance */
+    VALUE_PAIR *vp;                         /* value pair pointer */
+    char vpath[256], docid[256];            /* view path and document id */
+    const char *uname = NULL;               /* username pointer */
+    int length;                             /* string length buffer */
+    cookie_t *cookie;                       /* cookie return struct */
+    lcb_error_t cb_error = LCB_SUCCESS;     /* couchbase error holder */
+    json_object *json, *jval, *jval2;       /* json object holders */
+    json_object_iter iter;                  /* json object iterator */
 
     /* assert packet as not null */
     rad_assert(request->packet != NULL);
@@ -123,15 +116,7 @@ static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST
         p->authview, uname);
 
     /* init cookie */
-    cookie = calloc(1, sizeof(cookie_t));
-
-    /* check cookie */
-    if (cookie == NULL) {
-        /* log error */
-        ERROR("rlm_couchbase: failed to allocate cookie");
-        /* return */
-        return RLM_MODULE_FAIL;
-    }
+    cookie = rad_calloc(sizeof(cookie_t));
 
     /* init cookie error status */
     cookie->jerr = json_tokener_success;
@@ -162,6 +147,7 @@ static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST
 
     /* check for error in json object */
     if (cookie->jobj != NULL && json_object_object_get_ex(cookie->jobj, "error", &json)) {
+        char error[512];
         /* get length */
         length = json_object_get_string_len(json);
         /* check length and copy to error buffer */
@@ -280,15 +266,13 @@ static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST
     /* free cookie */
     free(cookie);
 
-    /* return failed */
-    return RLM_MODULE_FAIL;
+    /* default noop */
+    return RLM_MODULE_NOOP;
 }
 
 /* misc data manipulation before recording accounting data */
 static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, UNUSED REQUEST *request) {
-    VALUE_PAIR *vp;                             /* radius value pair linked list */
-    char *realm = NULL, *uname = NULL, *buff;   /* username and realm containers */
-    size_t size;                                /* size of user name string */
+    VALUE_PAIR *vp;     /* radius value pair linked list */
 
     /* assert packet as not null */
     rad_assert(request->packet != NULL);
@@ -301,10 +285,12 @@ static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, UNUSED REQUEST *
 
     /* get user string */
     if ((vp = pairfind(request->packet->vps, PW_USER_NAME, 0, TAG_ANY)) != NULL) {
-        /* get length */
-        size = (strlen(vp->vp_strvalue) + 1);
-        /* allocate and initialize buffer */
-        buff = calloc(1, size);
+        char *realm = NULL, *uname = NULL, *buff = NULL;   /* username and realm containers */
+        size_t size;                                       /* size of user name string */
+
+        /* allocate buffer and get size */
+        buff = rad_calloc((size = (strlen(vp->vp_strvalue) + 1)));
+
         /* pass to our split function */
         uname = couchbase_split_user_realm(vp->vp_strvalue, buff, size, &realm);
 
@@ -364,14 +350,7 @@ static rlm_rcode_t rlm_couchbase_accounting(UNUSED void *instance, UNUSED REQUES
     }
 
     /* initialize cookie */
-    cookie_t *cookie = calloc(1, sizeof(cookie_t));
-
-    /* check allocation */
-    if (cookie == NULL) {
-        /* log error and return error */
-        ERROR("rlm_couchbase: failed to allocate cookie");
-        return RLM_MODULE_FAIL;
-    }
+    cookie_t *cookie = rad_calloc(sizeof(cookie_t));
 
     /* attempt to build document key */
     if (radius_xlat(key, sizeof(key), request, p->key, NULL, NULL) < 0) {
@@ -501,8 +480,7 @@ static rlm_rcode_t rlm_couchbase_accounting(UNUSED void *instance, UNUSED REQUES
 }
 
 /* check for multiple simultaneous active sessions */
-static rlm_rcode_t rlm_couchbase_checksimul(UNUSED void *instance, UNUSED REQUEST *request)
-{
+static rlm_rcode_t rlm_couchbase_checksimul(UNUSED void *instance, UNUSED REQUEST *request) {
     /* nothing yet ... always set to 0 */
     request->simul_count = 0;
 
@@ -511,8 +489,7 @@ static rlm_rcode_t rlm_couchbase_checksimul(UNUSED void *instance, UNUSED REQUES
 }
 
 /* free any memory we allocated */
-static int rlm_couchbase_detach(UNUSED void *instance)
-{
+static int rlm_couchbase_detach(UNUSED void *instance) {
     rlm_couchbase_t *p = instance;  /* instance struct */
 
     /* free map object */
@@ -535,7 +512,7 @@ module_t rlm_couchbase = {
     rlm_couchbase_instantiate,      /* instantiation */
     rlm_couchbase_detach,           /* detach */
     {
-        rlm_couchbase_authenticate, /* authentication */
+        NULL,                       /* authentication */
         rlm_couchbase_authorize,    /* authorization */
         rlm_couchbase_preacct,      /* preaccounting */
         rlm_couchbase_accounting,   /* accounting */
