@@ -20,6 +20,9 @@ couchbase {
     ## document expire time in seconds (0 = never)
     expire = 2592000
 
+    ## view path for radius authentication
+    authview = "_design/client/_view/by_name"
+
     ## map attribute names to json element names
     ## attributes not in this map will not be recorded
     map = "{ \

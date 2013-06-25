@@ -34,6 +34,7 @@ static const CONF_PARSER module_config[] = {
     {"bucket", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, bucket), NULL, "default"},
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     {"expire", PW_TYPE_INTEGER, offsetof(rlm_couchbase_t, expire), NULL, 0},
+    {"authview", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, authview, NULL, "radauth")}
     {"map", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, map), NULL, "{null}"},
     {NULL, -1, 0, NULL, NULL}     /* end the list */
 };
@@ -80,6 +81,7 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     return 0;
 }
 
+
 /* authenticate given username and password - we shouldn't handle this */
 static rlm_rcode_t rlm_couchbase_authenticate(UNUSED void *instance, UNUSED REQUEST *request) {
     /* return noop */
@@ -88,11 +90,137 @@ static rlm_rcode_t rlm_couchbase_authenticate(UNUSED void *instance, UNUSED REQU
 
 /* authorize users via couchbase */
 static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST *request) {
-    char vpath[256], docid[256];    /* view path/filter and document id */
-    cookie_t *cookie;               /* cookie return struct */
+    rlm_couchbase_t *p = instance;      /* our module instance */
+    char vpath[256], docid[256];        /* document id and view path */
+    unsigned int length;                /* string length buffer */
+    char *uname;                        /* pointer to user name */
+    VALUE_PAIR *vp;                     /* value pair pointer */
+    cookie_t *cookie;                   /* cookie return struct */
+    lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
+    json_object *json, *jval;           /* json object holders */
+    struct json_object_iter iter;       /* json object iterator */
 
-    // /* return handled */
-    return RLM_MODULE_HANDLED;
+    /* assert packet as not null */
+    rad_assert(request->packet != NULL);
+
+    /* prefer stripped user name */
+    if ((vp = pairfind(request->packet->vps, PW_STRIPPED_USER_NAME, 0, TAG_ANY)) != NULL) {
+        uname = vp->vp_strvalue;
+    /* fallback to user-name */
+    } else if ((vp = pairfind(request->packet->vps, PW_USER_NAME, 0, TAG_ANY)) != NULL) {
+        uname = vp->vp_strvalue;
+    /* fail */
+    } else {
+        /* log error */
+        ERROR("rlm_couchbase: failed to find valid username for authorization");
+        /* return */
+        return RLM_MODULE_INVALID;
+    }
+
+    /* build view path */
+    snprintf(vpath, sizeof(vpath), "%s?stale=false&limit=1&connection_timeout=500&key=\"%s\"",
+        p->authview, uname);
+
+    /* init cookie */
+    cookie = calloc(1, sizeof(cookie_t));
+
+    /* check cookie */
+    if (cookie == NULL) {
+        /* log error */
+        ERROR("rlm_couchbase: failed to allocate cookie");
+        /* return */
+        return RLM_MODULE_FAIL;
+    }
+
+    /* init cookie error status */
+    cookie->jerr = json_tokener_success;
+
+    /* setup cookie tokener */
+    cookie->jtok = json_tokener_new();
+
+    /* query view for document */
+    cb_error = couchbase_query_view(p->cb_instance, cookie, vpath, NULL);
+
+    /* free json token */
+    json_tokener_free(cookie->jtok);
+
+    /* check error */
+    if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
+        /* log error */
+        ERROR("rlm_couchbase: failed to execute view request or parse return");
+        /* free json object */
+        json_object_put(cookie->jobj);
+        /* free cookie */
+        free(cookie);
+        /* return */
+        return RLM_MODULE_FAIL;
+    }
+
+    /* debugging */
+    RDEBUG("cookie->jobj == %s", json_object_to_json_string(cookie->jobj));
+
+    /* clear docid */
+    memset(docid, 0, sizeof(docid));
+
+    /* check for document id in return */
+    if (cookie->jobj != NULL && json_object_object_get_ex(cookie->jobj, "rows", &json)) {
+        /* check for valid row value */
+        if (json_object_is_type(json, json_type_array) && json_object_array_length(json) > 0) {
+            /* attempt to get id of first index of array */
+            json = json_object_array_get_idx(json, 0);
+            /* get document id */
+            if (json_object_object_get_ex(json, "id", &jval)) {
+                /* get length */
+                length = json_object_get_string_len(jval);
+                /* check length and copy string */
+                if (length < sizeof(docid) -1) {
+                    strncpy(docid, json_object_get_string(jval), length);
+                }
+            }
+        }
+    }
+
+    /* free json object */
+    json_object_put(cookie->jobj);
+
+    /* check for valid doc id */
+    if (docid[0] != 0) {
+        /* reset  cookie error status */
+        cookie->jerr = json_tokener_success;
+
+        /* fetch document */
+        cb_error = couchbase_get_key(p->cb_instance, cookie, docid);
+
+        /* check error */
+        if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
+            /* log error */
+            ERROR("failed to execute get request or parse return");
+            /* free json object */
+            json_object_put(cookie->jobj);
+            /* free cookie */
+            free(cookie);
+            /* return */
+            return RLM_MODULE_FAIL;
+        }
+
+        /* debugging */
+        RDEBUG("cookie->jobj = %s", json_object_to_json_string(cookie->jobj));
+
+        /* free json object */
+        json_object_put(cookie->jobj);
+
+        /* free cookie */
+        free(cookie);
+
+        /* return handled */
+        return RLM_MODULE_HANDLED;
+    }
+
+    /* free cookie */
+    free(cookie);
+
+    /* return failed */
+    return RLM_MODULE_FAIL;
 }
 
 /* misc data manipulation before recording accounting data */
