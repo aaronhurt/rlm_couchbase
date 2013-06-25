@@ -182,6 +182,10 @@ static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST
         }
         /* log error */
         ERROR("view request failed: %s", error);
+        /* free json object */
+        json_object_put(cookie->jobj);
+        /* free cookie */
+        free(cookie);
         /* return */
         return RLM_MODULE_FAIL;
     }
