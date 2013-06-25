@@ -21,6 +21,7 @@ typedef struct rlm_couchbase_t {
     const char *bucket;             /* couchbase bucket */
     const char *pass;               /* couchbase bucket password */
     unsigned int expire;            /* document expire time in seconds */
+    const char *authview;           /* couchbase view path for client authorization */
     const char *map;                /* user defined attribute map */
     json_object *map_object;        /* json object for parsed attribute map */
     lcb_t cb_instance;              /* couchbase connection instance */
@@ -34,7 +35,7 @@ static const CONF_PARSER module_config[] = {
     {"bucket", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, bucket), NULL, "default"},
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     {"expire", PW_TYPE_INTEGER, offsetof(rlm_couchbase_t, expire), NULL, 0},
-    {"authview", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, authview, NULL, "radauth")}
+    {"authview", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, authview), NULL, "_design/client/_view/by_name"},
     {"map", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, map), NULL, "{null}"},
     {NULL, -1, 0, NULL, NULL}     /* end the list */
 };
@@ -90,15 +91,15 @@ static rlm_rcode_t rlm_couchbase_authenticate(UNUSED void *instance, UNUSED REQU
 
 /* authorize users via couchbase */
 static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST *request) {
-    rlm_couchbase_t *p = instance;      /* our module instance */
-    char vpath[256], docid[256];        /* document id and view path */
-    unsigned int length;                /* string length buffer */
-    char *uname;                        /* pointer to user name */
-    VALUE_PAIR *vp;                     /* value pair pointer */
-    cookie_t *cookie;                   /* cookie return struct */
-    lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
-    json_object *json, *jval;           /* json object holders */
-    struct json_object_iter iter;       /* json object iterator */
+    rlm_couchbase_t *p = instance;              /* our module instance */
+    char vpath[256], docid[256], error[512];    /* view path, document id and error buffer */
+    unsigned int length;                        /* string length buffer */
+    const char *uname;                          /* pointer to user name */
+    VALUE_PAIR *vp;                             /* value pair pointer */
+    cookie_t *cookie;                           /* cookie return struct */
+    lcb_error_t cb_error = LCB_SUCCESS;         /* couchbase error holder */
+    json_object *json, *jval, *jval2;           /* json object holders */
+    json_object_iter iter;                      /* json object iterator */
 
     /* assert packet as not null */
     rad_assert(request->packet != NULL);
@@ -159,6 +160,32 @@ static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST
     /* debugging */
     RDEBUG("cookie->jobj == %s", json_object_to_json_string(cookie->jobj));
 
+    /* check for error in json object */
+    if (cookie->jobj != NULL && json_object_object_get_ex(cookie->jobj, "error", &json)) {
+        /* get length */
+        length = json_object_get_string_len(json);
+        /* check length and copy to error buffer */
+        if (length < sizeof(error) -1) {
+            strncpy(error, json_object_get_string(json), length);
+        }
+        /* get error reason */
+        if (json_object_object_get_ex(cookie->jobj, "reason", &json)) {
+            /* get length */
+            length = json_object_get_string_len(json);
+            /* check length and add to error buffer */
+            if (length + strlen(error) < sizeof(error) -4) {
+                /* add spacing */
+                strncat(error, " - ", 3);
+                /* append reason */
+                strncat(error, json_object_get_string(json), length);
+            }
+        }
+        /* log error */
+        ERROR("view request failed: %s", error);
+        /* return */
+        return RLM_MODULE_FAIL;
+    }
+
     /* clear docid */
     memset(docid, 0, sizeof(docid));
 
@@ -204,7 +231,37 @@ static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST
         }
 
         /* debugging */
-        RDEBUG("cookie->jobj = %s", json_object_to_json_string(cookie->jobj));
+        RDEBUG("cookie->jobj == %s", json_object_to_json_string(cookie->jobj));
+
+        /* get config payload */
+        if (json_object_object_get_ex(cookie->jobj, "config", &json)) {
+            /* loop through object */
+            json_object_object_foreachC(json, iter) {
+                /* debugging */
+                RDEBUG("%s => %s", iter.key, json_object_to_json_string(iter.val));
+                /* create pair from json object */
+                if (json_object_object_get_ex(iter.val, "value", &jval) &&
+                json_object_object_get_ex(iter.val, "op", &jval2)) {
+                    pairmake_config(iter.key, json_object_get_string(jval),
+                        fr_str2int(fr_tokens, json_object_get_string(jval2), 0));
+                }
+            }
+        }
+
+        /* get reply payload */
+        if (json_object_object_get_ex(cookie->jobj, "reply", &json)) {
+            /* loop through object */
+            json_object_object_foreachC(json, iter) {
+                /* debugging */
+                RDEBUG("%s => %s", iter.key, json_object_to_json_string(iter.val));
+                /* create pair from json object */
+                if (json_object_object_get_ex(iter.val, "value", &jval) &&
+                json_object_object_get_ex(iter.val, "op", &jval2)) {
+                    pairmake_reply(iter.key, json_object_get_string(jval),
+                        fr_str2int(fr_tokens, json_object_get_string(jval2), 0));
+                }
+            }
+        }
 
         /* free json object */
         json_object_put(cookie->jobj);
@@ -212,8 +269,8 @@ static rlm_rcode_t rlm_couchbase_authorize(UNUSED void *instance, UNUSED REQUEST
         /* free cookie */
         free(cookie);
 
-        /* return handled */
-        return RLM_MODULE_HANDLED;
+        /* return okay */
+        return RLM_MODULE_OK;
     }
 
     /* free cookie */
