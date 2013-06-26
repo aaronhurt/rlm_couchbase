@@ -78,8 +78,7 @@ Configuration
 
         ## couchbase host or hosts - multiple hosts should be semi-colon separated
         ## ports are optional if servers are listening on the standard port
-        ## pool addresses may also be used
-        #host = "cb01-blargs.com:9091;cb02-blargs.com;cb03-blargs.com"
+        ## complete pool urls are preferred
         host ="http://cb01.blargs.com:8091/pools/;http://cb04.blargs.com:8091/pools/"
 
         ## couchbase bucket name
