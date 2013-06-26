@@ -1,30 +1,33 @@
 couchbase {
-    ## couchbase document key - radius xlat supported
+    # Couchbase document key (xlat supported)
     key = "radacct_%{Acct-Session-Id}"
 
-    ## value for the 'docType' element in the json document body
+    # Value for the 'docType' element in the json document body
     doctype = "radacct"
 
-    ## couchbase host or hosts - multiple hosts should be semi-colon separated
-    ## ports are optional if servers are listening on the standard port
-    ## ports are optional if servers are listening on the standard port
-    ## complete pool urls are preferred
+    #
+    # List of Couchbase hosts semi-colon separated.  Ports are optional if servers
+    # are listening on the standard port.  Complete pool urls are preferred.
+    #
     host ="http://cb01.blargs.com:8091/pools/;http://cb04.blargs.com:8091/pools/"
 
-    ## couchbase bucket name
+    # Couchbase bucket name
     bucket = "radius"
 
-    ## bucket password
+    # Couchbase bucket password
     #pass = "password"
 
-    ## document expire time in seconds (0 = never)
+    ## Document expire time in seconds (0 = never)
     expire = 2592000
 
-    ## view path for radius authentication
+    # View path for radius authentication
     authview = "_design/client/_view/by_name"
 
-    ## map attribute names to json element names
-    ## attributes not in this map will not be recorded
+    #
+    # Map attribute names to json element names for accounting
+    # documents.  Atrributes noot in this map will not be recorded.
+    # This map should be a valid JSON document.
+    #
     map = "{ \
             \"Acct-Session-Id\": \"sessionId\", \
             \"Acct-Status-Type\": \"lastStatus\", \
@@ -49,5 +52,53 @@ couchbase {
             \"Acct-Output-Gigawords\": \"outputGigawords\", \
             \"Event-Timestamp\": \"lastUpdated\" \
     }"
-}
 
+    #
+    #  The connection pool is new for 3.0, and will be used in many
+    #  modules, for all kinds of connection-related activity.
+    #
+    pool {
+        # Number of connections to start
+        start = 5
+
+        # Minimum number of connections to keep open
+        min = 4
+
+        # Maximum number of connections
+        #
+        # If these connections are all in use and a new one
+        # is requested, the request will NOT get a connection.
+        max = 10
+
+        # Spare connections to be left idle
+        #
+        # NOTE: Idle connections WILL be closed if "idle_timeout"
+        # is set.
+        spare = 3
+
+        # Number of uses before the connection is closed
+        #
+        # 0 means "infinite"
+        uses = 0
+
+        # The lifetime (in seconds) of the connection
+        lifetime = 0
+
+        # The idle timeout (in seconds).  A connection which is
+        # unused for this length of time will be closed.
+        #
+        # NOTE: We will let libcouchbase handle reconnection of
+        # idle couchbase instances.
+        idle_timeout = 0
+
+        # NOTE: All configuration settings are enforced.  If a
+        # connection is closed because of "idle_timeout",
+        # "uses", or "lifetime", then the total number of
+        # connections MAY fall below "min".  When that
+        # happens, it will open a new connection.  It will
+        # also log a WARNING message.
+        #
+        # The solution is to either lower the "min" connections,
+        # or increase lifetime/idle_timeout.
+    }
+}
