@@ -13,7 +13,31 @@ RCSIDH(util_h, "$Id$");
 /* maximum length of a document key */
 #define MAX_KEY_SIZE 250
 
+/* configuration struct */
+typedef struct rlm_couchbase_t {
+    const char *key;                /* document key */
+    const char *doctype;            /* value of 'docType' element name */
+    const char *host;               /* couchbase connection host */
+    const char *bucket;             /* couchbase bucket */
+    const char *pass;               /* couchbase bucket password */
+    unsigned int expire;            /* document expire time in seconds */
+    const char *authview;           /* couchbase view path for client authorization */
+    const char *map;                /* user defined attribute map */
+    json_object *map_object;        /* json object for parsed attribute map */
+    fr_connection_pool_t *pool;     /* connection pool */
+} rlm_couchbase_t;
+
+/* connection pool handle struct */
+typedef struct rlm_couchbase_handle_t {
+    void *handle;    /* real couchbsae instance */
+    void *cookie;    /* couchbase cookie */
+} rlm_couchbase_handle_t;
+
 /* define functions */
+void *mod_conn_create(void *instance);
+
+int mod_conn_delete(UNUSED void *instance, void *handle);
+
 int couchbase_attribute_to_element(const char *name, json_object *map, void *attribute);
 
 json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp);

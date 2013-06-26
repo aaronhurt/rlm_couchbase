@@ -5,6 +5,8 @@
 
 RCSIDH(couchbase_h, "$Id$");
 
+#include <libcouchbase/couchbase.h>
+
 #include <json/json.h>
 
 /* struct to hold cookie data for couchbase callbacks */

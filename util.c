@@ -5,7 +5,54 @@ RCSID("$Id$")
 
 #include <json/json.h>
 
+#include "couchbase.h"
+
 #include "util.h"
+
+/* create new connection pool handle */
+void *mod_conn_create(void *instance) {
+    rlm_couchbase_t *inst = instance;           /* module instance pointer */
+    rlm_couchbase_handle_t *handle_t = NULL;    /* connection handle pointer */
+    cookie_t *cookie = NULL;                    /* couchbase cookie */
+    lcb_t cb_inst;                              /* couchbase connection instance */
+    lcb_error_t cb_error = LCB_SUCCESS;         /* couchbase error status */
+
+    /* create instance */
+    cb_inst = couchbase_init_connection(inst->host, inst->bucket, inst->pass);
+
+    /* check couchbase instance status */
+    if ((cb_error = lcb_get_last_error(cb_inst)) != LCB_SUCCESS) {
+        ERROR("rlm_couchbase: failed to initiate couchbase connection: %s", lcb_strerror(NULL, cb_error));
+        /* fail */
+        return NULL;
+    }
+
+    /* allocate memory for couchbase connection instance abstraction */
+    handle_t = talloc_zero(inst, rlm_couchbase_handle_t);
+    cookie = talloc_zero(handle_t, cookie_t);
+
+    /* populate handle with allocated structs */
+    handle_t->cookie = cookie;
+    handle_t->handle = cb_inst;
+
+    /* return handle struct */
+    return handle_t;
+}
+
+/* free couchbase instance handle and any additional context memory */
+int mod_conn_delete(UNUSED void *instance, void *handle) {
+    rlm_couchbase_handle_t *handle_t = handle;      /* connection instance handle */
+    lcb_t cb_inst = handle_t->handle;               /* couchbase instance */
+
+    /* destroy/free couchbase instance */
+    lcb_destroy(cb_inst);
+
+    /* free handle */
+    talloc_free(handle_t);
+
+    /* return */
+    return true;
+}
 
 /* map free radius attribute to user defined json element name */
 int couchbase_attribute_to_element(const char *name, json_object *map, void *buf) {
