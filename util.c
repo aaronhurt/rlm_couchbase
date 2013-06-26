@@ -211,7 +211,7 @@ char *couchbase_split_user_realm(const char *instring, char *outstring, size_t s
     *realm = NULL;      /* realm portion */
 
     /* copy input to output and ensure null termination */
-    *(stpncpy(outstring, instring, (size -1))) = '\0';
+    strlcpy(outstring, instring, size);
 
     /* check for realm prefix */
     if ((ptr = strstr(outstring, "\\")) != NULL) {
