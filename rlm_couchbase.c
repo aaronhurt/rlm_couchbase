@@ -33,9 +33,6 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     /* build instance */
     rlm_couchbase_t *inst = instance;
 
-    /* debugging */
-    DEBUG("rlm_couchbase: in instantiate ...");
-
     /* fail on bad config */
     if (cf_section_parse(conf, inst, module_config) < 0) {
         ERROR("rlm_couchbase: failed to parse config!");
@@ -306,15 +303,11 @@ static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request
         /* check uname and set if needed */
         if (uname != NULL) {
             pairmake_packet("Stripped-User-Name", uname, T_OP_SET);
-            /* debugging */
-            RDEBUG("Stripped-User-Name => %s", uname);
         }
 
         /* check realm and set if needed */
         if (realm != NULL) {
             pairmake_packet("Realm", realm, T_OP_SET);
-            /* debugging */
-            RDEBUG("Realm => %s", realm);
         }
 
         /* free uname */
@@ -396,20 +389,11 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         /* return */
         return RLM_MODULE_INVALID;
     } else {
-        /* debugging */
-        RDEBUG("built document key: '%s' => '%s'", inst->key, key);
-
         /* init cookie error status */
         cookie->jerr = json_tokener_success;
 
-        /* debugging */
-        RDEBUG("attempting get ...");
-
         /* attempt to fetch document */
         cb_error = couchbase_get_key(cb_inst, cookie, key);
-
-        /* debugging */
-        RDEBUG("post get 1...");
 
         /* check error */
         if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
@@ -418,8 +402,6 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
             /* free json object */
             json_object_put(cookie->jobj); 
         } else {
-            /* debugging */
-            RDEBUG("post get 2...");
             /* check cookie json object */
             if (cookie->jobj != NULL) {
                 /* set doc found */
@@ -429,9 +411,6 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
             }
         }
     }
-
-   /* debugging */
-    RDEBUG("post get 3...");
 
     /* start json document if needed */
     if (docfound != 1) {
@@ -445,9 +424,6 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         json_object_object_add(cookie->jobj, "startTimestamp", json_object_new_string("null"));
         json_object_object_add(cookie->jobj, "stopTimestamp", json_object_new_string("null"));
     }
-
-    /* debug */
-    RDEBUG("beginning status switch");
 
     /* status specific replacements for start/stop time */
     switch (status) {
@@ -474,9 +450,6 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
             /* do nothing */
         break;
     }
-
-    /* debug */
-    RDEBUG("finished status switch");
 
     /* loop through pairs and add to json document */
     for (vp = request->packet->vps; vp; vp = vp->next) {
@@ -527,9 +500,6 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
 /* free any memory we allocated */
 static int rlm_couchbase_detach(void *instance) {
     rlm_couchbase_t *inst = instance;  /* instance struct */
-
-    /* debugging */
-    DEBUG("rlm_couchbase: in detach ...");
 
     /* free map object */
     json_object_put(inst->map_object);
