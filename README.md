@@ -132,7 +132,9 @@ Configuration
             # Number of connections to start
             start = 5
 
-            # Minimum number of connections to keep open
+            # Minimum number of connections to keep open.
+            #
+            # NOTE: This should be greater than or equal to spare below.
             min = 4
 
             # Maximum number of connections
@@ -145,7 +147,7 @@ Configuration
             #
             # NOTE: Idle connections WILL be closed if "idle_timeout"
             # is set.
-            spare = 3
+            spare = 4
 
             # Number of uses before the connection is closed
             #

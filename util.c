@@ -87,6 +87,73 @@ int couchbase_attribute_to_element(const char *name, json_object *map, void *buf
     return -1;
 }
 
+/* inject value pairs into given request
+ * that are defined in the passed json object
+ */
+void *couchbase_json_object_to_value_pairs(json_object *json, const char *section, REQUEST *request) {
+    json_object *jobj, *jval, *jval2;   /* json object pointers */
+    json_object_iter iter;              /* json object iterator */
+    TALLOC_CTX *ctx;                    /* talloc context for pairmake */
+    VALUE_PAIR *vp, **ptr;              /* value pair and value pair pointer for pairmake */
+
+    /* assign ctx and vps for pairmake based on section */
+    if (strcmp(section, "config") == 0) {
+        ctx = request;
+        ptr = &(request->config_items);
+    } else if (strcmp(section, "reply") == 0) {
+        ctx = request->reply;
+        ptr = &(request->reply->vps);
+    } else {
+        /* log error - this shouldn't happen */
+        RERROR("rlm_couchbase: invalid section passed for pairmake");
+        /* return */
+        return NULL;
+    }
+
+    /* get config payload */
+    if (json_object_object_get_ex(json, section, &jobj)) {
+        /* loop through object */
+        json_object_object_foreachC(jobj, iter) {
+            /* debugging */
+            RDEBUG("parsing %s attribute %s => %s", section, iter.key, json_object_to_json_string(iter.val));
+            /* create pair from json object */
+            if (json_object_object_get_ex(iter.val, "value", &jval) &&
+            json_object_object_get_ex(iter.val, "op", &jval2)) {
+                /* make correct pairs based on json object type */
+                switch (json_object_get_type(jval)) {
+                    case json_type_double:
+                    case json_type_int:
+                    case json_type_string:
+                        /* debugging */
+                        RDEBUG("adding %s attribute %s", section, iter.key);
+                        /* add pair */
+                        vp = pairmake(ctx, ptr, iter.key, json_object_get_string(jval),
+                            fr_str2int(fr_tokens, json_object_get_string(jval2), 0));
+                        /* check pair */
+                        if (!vp) {
+                            RERROR("rlm_couchbase: could not build attribute %s", fr_strerror());
+                            /* return */
+                            return NULL;
+                        }
+                    break;
+                    case json_type_object:
+                    case json_type_array:
+                        /* log error - we want to handle these eventually */
+                        RERROR("rlm_couchbase: skipping unhandled json type object or array in value pair object");
+                    break;
+                    default:
+                        /* log error - this shouldn't ever happen */
+                        RERROR("rlm_couchbase: skipping unhandled json type in value pair object");
+                    break;
+                }
+            }
+        }
+    }
+
+    /* return NULL */
+    return NULL;
+}
+
 /* convert freeradius value/pair to json object
  * basic structure taken from freeradius function
  * vp_prints_value_json in src/lib/print.c */
@@ -147,7 +214,6 @@ int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
     json_object *jval;      /* json object value */
     struct tm tm;           /* struct to hold event time */
     time_t ts = 0;          /* values to hold time in seconds */
-    size_t length;          /* length of formatted date */
     VALUE_PAIR *vp;         /* values to hold value pairs */
     char value[255];        /* store radius attribute values and our timestamp */
 
@@ -186,7 +252,7 @@ int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
         /* calculate diff */
         ts = (ts - vp->vp_integer);
         /* calculate start time */
-        length = strftime(value, sizeof(value), "%b %e %Y %H:%M:%S %Z", localtime_r(&ts, &tm));
+        size_t length = strftime(value, sizeof(value), "%b %e %Y %H:%M:%S %Z", localtime_r(&ts, &tm));
         /* check length */
         if (length > 0) {
             /* debugging */

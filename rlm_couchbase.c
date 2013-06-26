@@ -75,8 +75,7 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     const char *uname = NULL;               /* username pointer */
     size_t length;                          /* string length buffer */
     lcb_error_t cb_error = LCB_SUCCESS;     /* couchbase error holder */
-    json_object *json, *jval, *jval2;       /* json object holders */
-    json_object_iter iter;                  /* json object iterator */
+    json_object *json, *jval;               /* json object holders */
 
     /* assert packet as not null */
     rad_assert(request->packet != NULL);
@@ -229,41 +228,17 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
             return RLM_MODULE_FAIL;
         }
 
+        /* release handle */
+        fr_connection_release(inst->pool, handle);
+
         /* debugging */
         RDEBUG("cookie->jobj == %s", json_object_to_json_string(cookie->jobj));
 
-        /* get config payload */
-        if (json_object_object_get_ex(cookie->jobj, "config", &json)) {
-            /* loop through object */
-            json_object_object_foreachC(json, iter) {
-                /* debugging */
-                RDEBUG("%s => %s", iter.key, json_object_to_json_string(iter.val));
-                /* create pair from json object */
-                if (json_object_object_get_ex(iter.val, "value", &jval) &&
-                json_object_object_get_ex(iter.val, "op", &jval2)) {
-                    pairmake_config(iter.key, json_object_get_string(jval),
-                        fr_str2int(fr_tokens, json_object_get_string(jval2), 0));
-                }
-            }
-        }
+        /* inject config value pairs defined in this json oblect */
+        couchbase_json_object_to_value_pairs(cookie->jobj, "config", request);
 
-        /* get reply payload */
-        if (json_object_object_get_ex(cookie->jobj, "reply", &json)) {
-            /* loop through object */
-            json_object_object_foreachC(json, iter) {
-                /* debugging */
-                RDEBUG("%s => %s", iter.key, json_object_to_json_string(iter.val));
-                /* create pair from json object */
-                if (json_object_object_get_ex(iter.val, "value", &jval) &&
-                json_object_object_get_ex(iter.val, "op", &jval2)) {
-                    pairmake_reply(iter.key, json_object_get_string(jval),
-                        fr_str2int(fr_tokens, json_object_get_string(jval2), 0));
-                }
-            }
-        }
-
-        /* release handle */
-        fr_connection_release(inst->pool, handle);
+        /* inject config value pairs defined in this json oblect */
+        couchbase_json_object_to_value_pairs(cookie->jobj, "reply", request);
 
         /* return okay */
         return RLM_MODULE_OK;
@@ -272,8 +247,8 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     /* release handle */
     fr_connection_release(inst->pool, handle);
 
-    /* default noop */
-    return RLM_MODULE_NOOP;
+    /* default fail */
+    return RLM_MODULE_FAIL;
 }
 
 /* misc data manipulation before recording accounting data */

@@ -40,6 +40,8 @@ int mod_conn_delete(UNUSED void *instance, void *handle);
 
 int couchbase_attribute_to_element(const char *name, json_object *map, void *attribute);
 
+void *couchbase_json_object_to_value_pairs(json_object *json, const char *section, REQUEST *request);
+
 json_object *couchbase_value_pair_to_json_object(VALUE_PAIR *vp);
 
 int couchbase_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps);
