@@ -10,7 +10,7 @@ RCSID("$Id$")
 
 #include <json/json.h>
 
-#include "util.h"
+#include "mod.h"
 #include "couchbase.h"
 
 /* map config to internal variables */
@@ -235,10 +235,10 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
         RDEBUG("cookie->jobj == %s", json_object_to_json_string(cookie->jobj));
 
         /* inject config value pairs defined in this json oblect */
-        couchbase_json_object_to_value_pairs(cookie->jobj, "config", request);
+        mod_json_object_to_value_pairs(cookie->jobj, "config", request);
 
         /* inject config value pairs defined in this json oblect */
-        couchbase_json_object_to_value_pairs(cookie->jobj, "reply", request);
+        mod_json_object_to_value_pairs(cookie->jobj, "reply", request);
 
         /* return okay */
         return RLM_MODULE_OK;
@@ -253,7 +253,8 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
 
 /* misc data manipulation before recording accounting data */
 static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request) {
-    VALUE_PAIR *vp;     /* radius value pair linked list */
+    rlm_couchbase_t *inst = instance;       /* our module instance */
+    VALUE_PAIR *vp;                         /* radius value pair linked list */
 
     /* assert packet as not null */
     rad_assert(request->packet != NULL);
@@ -270,10 +271,10 @@ static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request
         size_t size;                                       /* size of user name string */
 
         /* allocate buffer and get size */
-        buff = rad_calloc((size = (strlen(vp->vp_strvalue) + 1)));
+        buff = talloc_zero_size(inst, (size = (strlen(vp->vp_strvalue) + 1)));
 
         /* pass to our split function */
-        uname = couchbase_split_user_realm(vp->vp_strvalue, buff, size, &realm);
+        uname = mod_split_user_realm(vp->vp_strvalue, buff, size, &realm);
 
         /* check uname and set if needed */
         if (uname != NULL) {
@@ -286,7 +287,7 @@ static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request
         }
 
         /* free uname */
-        free(buff);
+        talloc_free(buff);
 
         /* return okay */
         return RLM_MODULE_OK;
@@ -406,20 +407,20 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
             /* add start time */
             if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0, TAG_ANY)) != NULL) {
                 /* add to json object */
-                json_object_object_add(cookie->jobj, "startTimestamp", couchbase_value_pair_to_json_object(vp));
+                json_object_object_add(cookie->jobj, "startTimestamp", mod_value_pair_to_json_object(vp));
             }
         break;
         case PW_STATUS_STOP:
             /* add stop time */
             if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0, TAG_ANY)) != NULL) {
                 /* add to json object */
-                json_object_object_add(cookie->jobj, "stopTimestamp", couchbase_value_pair_to_json_object(vp));
+                json_object_object_add(cookie->jobj, "stopTimestamp", mod_value_pair_to_json_object(vp));
             }
             /* check start timestamp and adjust if needed */
-            couchbase_ensure_start_timestamp(cookie->jobj, request->packet->vps);
+            mod_ensure_start_timestamp(cookie->jobj, request->packet->vps);
         case PW_STATUS_ALIVE:
             /* check start timestamp and adjust if needed */
-            couchbase_ensure_start_timestamp(cookie->jobj, request->packet->vps);
+            mod_ensure_start_timestamp(cookie->jobj, request->packet->vps);
         break;
         default:
             /* do nothing */
@@ -429,11 +430,11 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     /* loop through pairs and add to json document */
     for (vp = request->packet->vps; vp; vp = vp->next) {
         /* map attribute to element */
-        if (couchbase_attribute_to_element(vp->da->name, inst->map_object, &element) == 0) {
+        if (mod_attribute_to_element(vp->da->name, inst->map_object, &element) == 0) {
             /* debug */
             RDEBUG("mapped attribute %s => %s", vp->da->name, element);
             /* add to json object with mapped name */
-            json_object_object_add(cookie->jobj, element, couchbase_value_pair_to_json_object(vp));
+            json_object_object_add(cookie->jobj, element, mod_value_pair_to_json_object(vp));
         }
     }
 
