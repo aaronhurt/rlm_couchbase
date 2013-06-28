@@ -162,8 +162,8 @@ if test x$with_[]modname != xno; then
 	dnl ############################################################
 
 	smart_try_dir="$libcouchbase_lib_dir"
-	FR_SMART_CHECK_LIB([libcouchbase], [libcouchbase_version])
-	if test "x$ac_cv_lib_libcouchbase_libcouchbase_version" != "xyes"
+	FR_SMART_CHECK_LIB([couchbase], [lcb_get_version])
+	if test "x$ac_cv_lib_couchbase_lcb_get_version" != "xyes"
 	then
 		have_couchbase="no"
 		AC_MSG_ERROR([libcouchbase libraries not found. Use --with-libcouchbase-lib-dir=<path>.])
@@ -194,6 +194,8 @@ if test x"$fail" != x""; then
 	fi
 fi
 
+mod_ldflags="${SMART_LIBS}"
+mod_cflags="${SMART_CFLAGS}"
 
 AC_SUBST(mod_cflags)
 AC_SUBST(mod_ldflags)
