@@ -2,6 +2,7 @@ AC_PREREQ([2.53])
 AC_INIT(rlm_couchbase.c)
 AC_REVISION($Revision$)
 AC_DEFUN(modname,[rlm_couchbase])
+AC_CONFIG_HEADER(config.h)
 
 if test x$with_[]modname != xno; then
 
@@ -44,8 +45,6 @@ fi
 
 AC_SUBST(mod_cflags)
 AC_SUBST(mod_ldflags)
-
-AC_CONFIG_HEADER(config.h)
 
 AC_SUBST(targetname)
 AC_OUTPUT(all.mk)
