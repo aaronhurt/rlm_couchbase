@@ -12,18 +12,170 @@ if test x$with_[]modname != xno; then
 	dnl put configuration checks here.
 	dnl set $fail to what's missing, on fatal errors.
 	dnl use AC_MSG_WARN() on important messages.
-	AC_CHECK_LIB(c, printf,
-		[ mod_ldflags="$mod_ldflags -lc" ],
-		[ fail=$fail" printf" ]
-	)
 
-	AC_CHECK_HEADER(stdio.h,
-		[ mod_cflags="$mod_cflags -I/usr/include" ],
-		[ fail=$fail" stdio.h" ]
-	)
+	dnl ############################################################
+	dnl # Check for json-c
+	dnl ############################################################
 
-	AC_CHECK_HEADERS(stdio.h stdlib.h)
-	AC_CHECK_FUNCS(printf)
+	dnl extra argument: --with-jsonc-include-dir=DIR
+	jsonc_include_dir=
+	AC_ARG_WITH(jsonc-include-dir,
+		[AS_HELP_STRING([--with-jsonc-include-dir=DIR],
+		[Directory where the json-c includes may be found])],
+		[case "$withval" in
+			no)
+				AC_MSG_ERROR(Need jsonc-include-dir)
+			;;
+			yes)
+			;;
+			*)
+				jsonc_include_dir="$withval"
+			;;
+		esac])
+
+	dnl extra argument: --with-jsonc-lib-dir=DIR
+	jsonc_lib_dir=
+	AC_ARG_WITH(jsonc-lib-dir,
+	[AS_HELP_STRING([--with-jsonc-lib-dir=DIR],
+		[Directory where the json-c libraries may be found])],
+		[case "$withval" in
+			no)
+				AC_MSG_ERROR(Need jsonc-lib-dir)
+			;;
+			yes)
+			;;
+			*)
+				jsonc_lib_dir="$withval"
+			;;
+		esac])
+
+	dnl extra argument: --with-jsonc-dir=DIR
+	AC_ARG_WITH(jsonc-dir,
+	[AS_HELP_STRING([--with-jsonc-dir=DIR],
+		[Base directory where json-c is installed])],
+		[case "$withval" in
+			no)
+				AC_MSG_ERROR(Need json-c-dir)
+			;;
+			yes)
+			;;
+			*)
+				jsonc_lib_dir="$withval/lib"
+				jsonc_include_dir="$withval/include"
+			;;
+		esac])
+
+	dnl ############################################################
+	dnl # Check for json-c header files
+	dnl ############################################################
+
+	have_json="yes"
+	smart_try_dir="$jsonc_include_dir"
+	FR_SMART_CHECK_INCLUDE([json/json.h])
+	if test "x$ac_cv_header_json_json_h" != "xyes"; then
+		have_json="no"
+		AC_MSG_ERROR([json-c headers not found. Use --with-jsonc-include-dir=<path>.])
+	fi
+
+	dnl ############################################################
+	dnl # Check for json-c libraries
+	dnl ############################################################
+
+	smart_try_dir="$jsonc_lib_dir"
+	FR_SMART_CHECK_LIB([json-c], [json_c_version])
+	if test "x$ac_cv_lib_json_c_json_c_version" != "xyes"
+	then
+		have_json="no"
+		AC_MSG_ERROR([json-c libraries not found. Use --with-jsonc-lib-dir=<path>.])
+	fi
+
+	if test "x$have_json" = "xno"; then
+		fail="$fail json-c not found"
+	fi
+
+	dnl ############################################################
+	dnl # Check for libcouchbase
+	dnl ############################################################
+
+	dnl extra argument: --with-libcouchbase-include-dir=DIR
+	libcouchbase_include_dir=
+	AC_ARG_WITH(libcouchbase-include-dir,
+		[AS_HELP_STRING([--with-libcouchbase-include-dir=DIR],
+		[Directory where the libcouchbase includes may be found])],
+		[case "$withval" in
+			no)
+				AC_MSG_ERROR(Need libcouchbase-include-dir)
+			;;
+			yes)
+			;;
+			*)
+				libcouchbase_include_dir="$withval"
+			;;
+		esac])
+
+	dnl extra argument: --with-libcouchbase-lib-dir=DIR
+	libcouchbase_lib_dir=
+	AC_ARG_WITH(libcouchbase-lib-dir,
+	[AS_HELP_STRING([--with-libcouchbase-lib-dir=DIR],
+		[Directory where the libcouchbase libraries may be found])],
+		[case "$withval" in
+			no)
+				AC_MSG_ERROR(Need libcouchbase-lib-dir)
+			;;
+			yes)
+			;;
+			*)
+				libcouchbase_lib_dir="$withval"
+			;;
+		esac])
+
+	dnl extra argument: --with-libcouchbase-dir=DIR
+	AC_ARG_WITH(libcouchbase-dir,
+	[AS_HELP_STRING([--with-libcouchbase-dir=DIR],
+		[Base directory where libcouchbase is installed])],
+		[case "$withval" in
+			no)
+				AC_MSG_ERROR(Need libcouchbase-dir)
+			;;
+			yes)
+			;;
+			*)
+				libcouchbase_lib_dir="$withval/lib"
+				libcouchbase_include_dir="$withval/include"
+			;;
+		esac])
+
+	dnl ############################################################
+	dnl # Check for libcouchbase header files
+	dnl ############################################################
+
+	have_couchbase="yes"
+	smart_try_dir="$libcouchbase_include_dir"
+	FR_SMART_CHECK_INCLUDE([libcouchbase/couchbase.h])
+	if test "x$ac_cv_header_libcouchbase_couchbase_h" != "xyes"; then
+		have_couchbase="no"
+		AC_MSG_ERROR([libcouchbase headers not found. Use --with-libcouchbase-include-dir=<path>.])
+	fi
+
+	dnl ############################################################
+	dnl # Check for libcouchbase libraries
+	dnl ############################################################
+
+	smart_try_dir="$libcouchbase_lib_dir"
+	FR_SMART_CHECK_LIB([libcouchbase], [libcouchbase_version])
+	if test "x$ac_cv_lib_libcouchbase_libcouchbase_version" != "xyes"
+	then
+		have_couchbase="no"
+		AC_MSG_ERROR([libcouchbase libraries not found. Use --with-libcouchbase-lib-dir=<path>.])
+	fi
+
+	if test "x$have_couchbase" = "xno"; then
+		fail="$fail libcouchbase not found"
+	fi
+
+	dnl ############################################################
+	dnl # Checks done - set targetname
+	dnl ############################################################
 
 	targetname=modname
 else
