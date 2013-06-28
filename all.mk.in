@@ -15,4 +15,5 @@ TGT_LDLIBS	:= @mod_ldflags@ -lcouchbase -ljson
 install: $(R)$(raddbdir)/mods-available/couchbase
 
 $(R)$(raddbdir)/mods-available/couchbase: src/modules/rlm_couchbase/couchbase.config
-	@$(INSTALL) -m 644 src/modules/rlm_couchbase/couchbase.config $(R)$(raddbdir)/mods-available/couchbase
+	@echo INSTALL $(patsubst $(R)$(raddbdir)/%,raddb/%,$@)
+	@install -m 640 $< $@
