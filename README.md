@@ -80,7 +80,7 @@ Configuration
         # List of Couchbase hosts semi-colon separated.  Ports are optional if servers
         # are listening on the standard port.  Complete pool urls are preferred.
         #
-        host ="http://cb01.blargs.com:8091/pools/;http://cb04.blargs.com:8091/pools/"
+        server = "http://cb01.blargs.com:8091/pools/;http://cb04.blargs.com:8091/pools/"
 
         # Couchbase bucket name
         bucket = "radius"
@@ -112,7 +112,6 @@ Configuration
                 \"Called-Station-Id\": \"calledStationId\", \
                 \"Calling-Station-Id\": \"callingStationId\", \
                 \"Framed-IP-Address\": \"framedIpAddress\", \
-                \"Nas-Port-Type\": \"nasPortType\", \
                 \"Connect-Info\": \"connectInfo\", \
                 \"Acct-Session-Time\": \"sessionTime\", \
                 \"Acct-Input-Packets\": \"inputPackets\", \
