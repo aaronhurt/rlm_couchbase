@@ -17,12 +17,12 @@ RCSID("$Id$")
 static const CONF_PARSER module_config[] = {
     {"key", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, key), NULL, "radacct_%{Acct-Session-Id}"},
     {"doctype", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, doctype), NULL, "radacct"},
-    {"host", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, host), NULL, "localhost"},
-    {"bucket", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, bucket), NULL, "default"},
+    {"server", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, server), NULL, NULL},
+    {"bucket", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, bucket), NULL, NULL},
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     {"expire", PW_TYPE_INTEGER, offsetof(rlm_couchbase_t, expire), NULL, 0},
-    {"authview", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, authview), NULL, "_design/client/_view/by_name"},
-    {"map", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, map), NULL, "{null}"},
+    {"authview", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, authview), NULL, NULL},
+    {"map", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, map), NULL, NULL},
     {NULL, -1, 0, NULL, NULL}     /* end the list */
 };
 
@@ -89,7 +89,7 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     /* fail */
     } else {
         /* log error */
-        ERROR("rlm_couchbase: failed to find valid username for authorization");
+        RERROR("rlm_couchbase: failed to find valid username for authorization");
         /* return */
         return RLM_MODULE_INVALID;
     }
@@ -141,7 +141,7 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     /* check error */
     if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
         /* log error */
-        ERROR("rlm_couchbase: failed to execute view request or parse return");
+        RERROR("rlm_couchbase: failed to execute view request or parse return");
         /* free json object */
         json_object_put(cookie->jobj);
         /* release handle */
@@ -175,7 +175,7 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
             }
         }
         /* log error */
-        ERROR("view request failed: %s", error);
+        RERROR("view request failed: %s", error);
         /* free json object */
         json_object_put(cookie->jobj);
         /* release handle */
@@ -219,7 +219,7 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
         /* check error */
         if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
             /* log error */
-            ERROR("failed to execute get request or parse return");
+            RERROR("failed to execute get request or parse return");
             /* free json object */
             json_object_put(cookie->jobj);
             /* release handle */
