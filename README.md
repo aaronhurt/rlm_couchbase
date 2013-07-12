@@ -7,30 +7,33 @@ Different status types (start/stop/update) are merged into a single document for
 Example from an Aerohive Wireless Access Point:
 
     {
-       "docType": "radacct",
-       "startTimestamp": "Jun 24 2013 17:22:06 CDT",
-       "connectInfo": "11ng",
-       "stopTimestamp": "Jun 24 2013 17:22:26 CDT",
-       "sessionId": "5176C004-000018C0",
-       "lastStatus": 2,
-       "authentic": 1,
-       "userName": "DOMAIN\\barney",
-       "nasIpAddress": "1.2.3.4",
-       "nasIdentifier": "ap1.blargs.net",
-       "nasPort": 0,
-       "calledStationId": "08-EA-44-3D-AF-94:My-WiFi-Network",
-       "framedIpAddress": "1.2.3.5",
-       "callingStationId": "F0-D1-A9-78-8E-F5",
-       "sessionTime": 20,
-       "inputPackets": 321,
-       "inputOctets": 42074,
-       "inputGigawords": 0,
-       "outputOctets": 9787,
-       "outputGigawords": 0,
-       "outputPackets": 64,
-       "lastUpdated": "Jun 24 2013 17:22:26 CDT",
-       "strippedUserName": "barney",
-       "realm": "DOMAIN"
+      "docType": "radacct",
+      "startTimestamp": "Jul 12 2013 12:40:48 CDT",
+      "stopTimestamp": "Jul 12 2013 12:40:49 CDT",
+      "sessionId": "51D24567-0000028F",
+      "lastStatus": 2,
+      "authentic": 1,
+      "userName": "BLARGS\\bgates",
+      "nasIpAddress": "172.28.5.160",
+      "nasIdentifier": "air3.blargs.net",
+      "nasPort": 0,
+      "calledStationId": "40-18-B1-07-92-E8:Blargs-WiFi",
+      "callingStationId": "54-26-96-33-44-DA",
+      "nasPortType": 19,
+      "connectInfo": "11na",
+      "class": "0x498b057d0000013700010200ac1b020300000000000000000000000001ce741530c3478400000000000194ca",
+      "lastUpdated": "Jul 12 2013 12:40:49 CDT",
+      "uniqueId": "f030fbd3f2d55cb469808ac767ebbfc8",
+      "strippedUserName": "bgates",
+      "realm": "BLARGS",
+      "framedIpAddress": "172.27.2.224",
+      "sessionTime": 3,
+      "inputPackets": 156,
+      "inputOctets": 15840,
+      "inputGigawords": 0,
+      "outputOctets": 6535,
+      "outputGigawords": 0,
+      "outputPackets": 48
     }
 
 The module is also capable of authorizing users via documents stored in couchbase.  The document keys should be returned via a simple view like the following:
@@ -70,8 +73,8 @@ Configuration
 -------------
 
     couchbase {
-        # Couchbase document key (xlat supported)
-        key = "radacct_%{Acct-Session-Id}"
+        # Couchbase document key (unlang supported)
+        key = "radacct_%{%{Acct-Unique-Session-Id}:-%{Acct-Session-Id}}"
 
         # Value for the 'docType' element in the json document body
         doctype = "radacct"
@@ -101,6 +104,7 @@ Configuration
         #
         map = "{ \
                 \"Acct-Session-Id\": \"sessionId\", \
+                \"Acct-Unique-Session-Id\": \"uniqueId\", \
                 \"Acct-Status-Type\": \"lastStatus\", \
                 \"Acct-Authentic\": \"authentic\", \
                 \"User-Name\": \"userName\", \
@@ -112,7 +116,9 @@ Configuration
                 \"Called-Station-Id\": \"calledStationId\", \
                 \"Calling-Station-Id\": \"callingStationId\", \
                 \"Framed-IP-Address\": \"framedIpAddress\", \
+                \"NAS-Port-Type\": \"nasPortType\", \
                 \"Connect-Info\": \"connectInfo\", \
+                \"Class\": \"class\", \
                 \"Acct-Session-Time\": \"sessionTime\", \
                 \"Acct-Input-Packets\": \"inputPackets\", \
                 \"Acct-Output-Packets\": \"outputPackets\", \

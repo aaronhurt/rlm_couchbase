@@ -15,6 +15,5 @@ TGT_LDLIBS	:= @mod_ldflags@
 install: $(R)$(raddbdir)/mods-available/couchbase
 
 $(R)$(raddbdir)/mods-available/couchbase: src/modules/rlm_couchbase/couchbase.config
-	@$(INSTALL) -d -m 755 $(dir $@)
 	@echo INSTALL $(patsubst $(R)$(raddbdir)/%,raddb/%,$@)
 	@$(INSTALL) -m 640 $< $@
