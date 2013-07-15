@@ -109,11 +109,13 @@ Configuration
                 \"Acct-Authentic\": \"authentic\", \
                 \"User-Name\": \"userName\", \
                 \"Stripped-User-Name\": \"strippedUserName\", \
+                \"Stripped-User-Domain\": \"strippedUserDomain\", \
                 \"Realm\": \"realm\", \
                 \"NAS-IP-Address\": \"nasIpAddress\", \
                 \"NAS-Identifier\": \"nasIdentifier\", \
                 \"NAS-Port\": \"nasPort\", \
                 \"Called-Station-Id\": \"calledStationId\", \
+                \"Called-Station-SSID\": \"calledStationSSID\", \
                 \"Calling-Station-Id\": \"callingStationId\", \
                 \"Framed-IP-Address\": \"framedIpAddress\", \
                 \"NAS-Port-Type\": \"nasPortType\", \

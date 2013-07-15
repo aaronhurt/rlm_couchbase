@@ -267,23 +267,23 @@ static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request
 
     /* get user string */
     if ((vp = pairfind(request->packet->vps, PW_USER_NAME, 0, TAG_ANY)) != NULL) {
-        char *realm = NULL, *uname = NULL, *buff = NULL;   /* username and realm containers */
-        size_t size;                                       /* size of user name string */
+        char *domain = NULL, *uname = NULL, *buff = NULL;   /* username and domain containers */
+        size_t size;                                        /* size of user name string */
 
         /* allocate buffer and get size */
         buff = talloc_zero_size(inst, (size = (strlen(vp->vp_strvalue) + 1)));
 
         /* pass to our split function */
-        uname = mod_split_user_realm(vp->vp_strvalue, buff, size, &realm);
+        uname = mod_split_user_domain(vp->vp_strvalue, buff, size, &domain);
 
         /* check uname and set if needed */
         if (uname != NULL) {
             pairmake_packet("Stripped-User-Name", uname, T_OP_SET);
         }
 
-        /* check realm and set if needed */
-        if (realm != NULL) {
-            pairmake_packet("Realm", realm, T_OP_SET);
+        /* check domain and set if needed */
+        if (domain != NULL) {
+            pairmake_packet("Stripped-User-Domain", domain, T_OP_SET);
         }
 
         /* free uname */

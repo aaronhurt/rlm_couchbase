@@ -46,6 +46,6 @@ json_object *mod_value_pair_to_json_object(VALUE_PAIR *vp);
 
 int mod_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps);
 
-char *mod_split_user_realm(const char *instring, char *outstring, size_t size, char **realm);
+char *mod_split_user_domain(const char *instring, char *outstring, size_t size, char **domain);
 
 #endif /* _UTIL_H */

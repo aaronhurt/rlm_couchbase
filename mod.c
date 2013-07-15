@@ -271,26 +271,26 @@ int mod_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps) {
     return 0;
 }
 
-/* split username and realm from passed user name string */
-char *mod_split_user_realm(const char *instring, char *outstring, size_t size, char **realm) {
+/* split username and domain from passed user name string */
+char *mod_split_user_domain(const char *instring, char *outstring, size_t size, char **domain) {
     char *ptr = NULL;   /* position pointer */
-    *realm = NULL;      /* realm portion */
+    *domain = NULL;     /* domain portion */
 
     /* copy input to output and ensure null termination */
     strlcpy(outstring, instring, size);
 
-    /* check for realm prefix */
+    /* check for domain prefix */
     if ((ptr = strstr(outstring, "\\")) != NULL) {
-        *realm = outstring;
+        *domain = outstring;
         *ptr = '\0';
         outstring = ptr + 1;
     }
-    /* check for realm suffix */
+    /* check for domain suffix */
     else if ((ptr = strstr(outstring, "@")) != NULL) {
         *ptr = '\0';
-        *realm = ptr + 1;
+        *domain = ptr + 1;
     }
 
-    /* return username without realm */
+    /* return username without domain */
     return outstring;
 }
