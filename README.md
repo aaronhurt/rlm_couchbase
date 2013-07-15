@@ -1,8 +1,11 @@
 rlm_couchbase
 =============
 
-Stores radius accounting data directly into couchbase. You can use any radius attribute as a document key (I suggest Acct-Session-Id or Acct-Unique-Session-Id).
-Different status types (start/stop/update) are merged into a single document for easy view writing.
+Stores radius accounting data directly into couchbase. You can use any radius attribute as a document key.  The default will try to use Acct-Unique-Session-Id
+and fallback to Acct-Session-Id if Acct-Unique-Session-Id is not present (needs acct_unique policy in preacct to generate the unique id).
+Different status types (start/stop/update) are merged into a single document for easy view writing.  To generate the calledStationSSID fields you will need to
+use the rewrite_called_station_id policy in the preacct section of your config.  The couchbase module will attempt to produce the Stripped-User-Name and
+Stripped-Domain-Name attributes if used in the preacct section.
 
 Example from an Aerohive Wireless Access Point:
 
