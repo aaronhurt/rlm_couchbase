@@ -71,7 +71,7 @@ To Use
 ------
 
 Pull freeradius-server master and clone this module under src/modules.  Then enable and compile as usual.
-You will need libcouchbase >= 2.0 installed with a valid libio module.  You will also need the json-c library installed and available.
+You will need [libcouchbase](https://github.com/couchbase/libcouchbase) >= 2.0 installed with a valid libio module.  You will also need [json-c](https://github.com/json-c/json-c) >= 0.11 installed and available.
 
 Configuration
 -------------
