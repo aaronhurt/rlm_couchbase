@@ -464,7 +464,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
 
     /* check return */
     if (cb_error != LCB_SUCCESS) {
-        RERROR("rlm_couchbase: failed to store document (%s): %s", key, lcb_strerror(NULL, cb_error));
+        RERROR("rlm_couchbase: failed to store document (%s): %s (0x%x)", key, lcb_strerror(NULL, cb_error), error);
     }
 
     /* release handle */

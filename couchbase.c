@@ -122,12 +122,9 @@ lcb_t couchbase_init_connection(const char *host, const char *bucket, const char
     }
 
     /* create couchbase connection instance */
-    error = lcb_create(&instance, options);
-
-    /* check error status */
-    if (error != LCB_SUCCESS) {
+    if ((error = lcb_create(&instance, options)) != LCB_SUCCESS) {
         /* log error and return */
-        ERROR("rlm_couchbase: failed to create couchbase instance: %s", lcb_strerror(NULL, error));
+        ERROR("rlm_couchbase: failed to create couchbase instance: %s (0x%x)", lcb_strerror(NULL, error), error);
         /* free options */
         free(options);
         /* return instance */
@@ -135,23 +132,18 @@ lcb_t couchbase_init_connection(const char *host, const char *bucket, const char
     }
 
     /* initiate connection */
-    if ((error = lcb_connect(instance)) != LCB_SUCCESS) {
-        /* log error and return */
-        ERROR("rlm_couchbase: Failed to initiate couchbase connection: %s", lcb_strerror(NULL, error));
-        /* free options */
-        free(options);
-        /* return instance */
-        return instance;
+    if ((error = lcb_connect(instance)) == LCB_SUCCESS) {
+        /* set general method callbacks */
+        lcb_set_error_callback(instance, couchbase_error_callback);
+        lcb_set_get_callback(instance, couchbase_get_callback);
+        lcb_set_store_callback(instance, couchbase_store_callback);
+        lcb_set_http_data_callback(instance, couchbase_http_data_callback);
+        /* wait on connection */
+        lcb_wait(instance);
+    } else {
+        /* log error */
+        ERROR("rlm_couchbase: Failed to initiate couchbase connection: %s (0x%x)", errpr, lcb_strerror(NULL, error), error);
     }
-
-    /* set general method callbacks */
-    lcb_set_error_callback(instance, couchbase_error_callback);
-    lcb_set_get_callback(instance, couchbase_get_callback);
-    lcb_set_store_callback(instance, couchbase_store_callback);
-    lcb_set_http_data_callback(instance, couchbase_http_data_callback);
-
-    /* wait on connection */
-    lcb_wait(instance);
 
     /* free options */
     free(options);
@@ -180,10 +172,10 @@ lcb_error_t couchbase_set_key(lcb_t instance, const char *key, const char *docum
     const lcb_store_cmd_t *commands[] = { store };
 
     /* store key/document in couchbase */
-    error = lcb_store(instance, NULL, 1, commands);
-
-    /* enter event loop */
-    lcb_wait(instance);
+    if ((error = lcb_store(instance, NULL, 1, commands)) == LCB_SUCCESS) {
+        /* enter event loop on success */
+        lcb_wait(instance);
+    }
 
     /* free store */
     free(store);
@@ -209,10 +201,10 @@ lcb_error_t couchbase_touch_key(lcb_t instance, const char *key, lcb_time_t expt
     const lcb_touch_cmd_t *commands[] = { touch };
 
     /* touch document */
-    error = lcb_touch(instance, NULL, 1, commands);
-
-    /* enter event loop */
-    lcb_wait(instance);
+    if ((error = lcb_touch(instance, NULL, 1, commands)) == LCB_SUCCESS) {
+        /* enter event loop on success */
+        lcb_wait(instance);
+    }
 
     /* free touch */
     free(touch);
@@ -237,10 +229,10 @@ lcb_error_t couchbase_get_key(lcb_t instance, const void *cookie, const char *ke
     const lcb_touch_cmd_t *commands[] = { get };
 
     /* get document */
-    error = lcb_get(instance, cookie, 1, commands);
-
-    /* enter event loop */
-    lcb_wait(instance);
+    if ((error = lcb_get(instance, cookie, 1, commands)) == LCB_SUCCESS) {
+        /* enter event loop on success */
+        lcb_wait(instance);
+    }
 
     /* free get */
     free(get);
@@ -267,10 +259,10 @@ lcb_error_t couchbase_query_view(lcb_t instance, const void *cookie, const char 
     http->v.v0.content_type = "application/json";
 
     /* query the view */
-    error = lcb_make_http_request(instance, cookie, LCB_HTTP_TYPE_VIEW, http, NULL);
-
-    /* enter event loop */
-    lcb_wait(instance);
+    if ((error = lcb_make_http_request(instance, cookie, LCB_HTTP_TYPE_VIEW, http, NULL)) == LCB_SUCCESS) {
+        /* enter event loop on success */
+        lcb_wait(instance);
+    }
 
     /* free http */
     free(http);

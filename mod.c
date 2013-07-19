@@ -22,7 +22,7 @@ void *mod_conn_create(void *instance) {
 
     /* check couchbase instance status */
     if ((cb_error = lcb_get_last_error(cb_inst)) != LCB_SUCCESS) {
-        ERROR("rlm_couchbase: failed to initiate couchbase connection: %s", lcb_strerror(NULL, cb_error));
+        ERROR("rlm_couchbase: failed to initiate couchbase connection: %s (0x%x)", lcb_strerror(NULL, cb_error), error);
         /* fail */
         return NULL;
     }
