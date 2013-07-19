@@ -22,6 +22,7 @@ static const CONF_PARSER module_config[] = {
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     {"expire", PW_TYPE_INTEGER, offsetof(rlm_couchbase_t, expire), NULL, 0},
     {"authview", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, authview), NULL, NULL},
+    {"viewtimeout", PW_TYPE_INTEGER | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, viewtimeout), NULL, NULL},
     {"map", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, map), NULL, NULL},
     {NULL, -1, 0, NULL, NULL}     /* end the list */
 };
@@ -123,8 +124,8 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     }
 
     /* build view path */
-    snprintf(vpath, sizeof(vpath), "%s?stale=false&limit=1&connection_timeout=500&key=\"%s\"",
-        inst->authview, uname);
+    snprintf(vpath, sizeof(vpath), "%s?stale=false&limit=1&connection_timeout=%1u&key=\"%s\"",
+        inst->authview, inst->viewtimeout, uname);
 
     /* init cookie error status */
     cookie->jerr = json_tokener_success;
