@@ -196,4 +196,4 @@ of your site configuration if you are planning to use it for both purposes.
 You should also have PAP enabled for authenticating users based on cleartext or hashed password attributes.
 As always YMMV.
 
-This module was built and tested against the FreeRADIUS 3.0.0 release branch (FreeRADIUS/freeradius-server/tree/release_branch_3.0.0) as of the latest commit to this branch.
+This module was built and tested against the [FreeRADIUS 3.0.0 release branch](https://github.com/FreeRADIUS/freeradius-server/tree/release_branch_3.0.0).
