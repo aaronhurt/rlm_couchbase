@@ -101,6 +101,9 @@ Configuration
         # View path for radius authentication
         authview = "_design/user/_view/by_name"
 
+        # View timeout in milliseconds
+        viewtimeout = "10000"
+
         #
         # Map attribute names to json element names for accounting
         # documents.  Atrributes noot in this map will not be recorded.
