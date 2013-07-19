@@ -142,7 +142,7 @@ lcb_t couchbase_init_connection(const char *host, const char *bucket, const char
         lcb_wait(instance);
     } else {
         /* log error */
-        ERROR("rlm_couchbase: Failed to initiate couchbase connection: %s (0x%x)", errpr, lcb_strerror(NULL, error), error);
+        ERROR("rlm_couchbase: Failed to initiate couchbase connection: %s (0x%x)", error, lcb_strerror(NULL, error), error);
     }
 
     /* free options */
