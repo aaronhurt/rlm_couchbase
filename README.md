@@ -43,16 +43,16 @@ Example from an Aerohive Wireless Access Point:
 The module is also capable of authorizing users via documents stored in couchbase.  The document keys should be returned via a simple view like the following:
 
     function (doc, meta) {
-      if (doc.docType && doc.docType == "radclient" && doc.clientName) {
-        emit(doc.clientName, null);
+      if (doc.docType && doc.docType == "raduser" && doc.userName) {
+        emit(doc.userName, null);
       }
     }
 
 The document structure is straight forward and flexible:
 
     {
-      "docType": "radclient",
-      "clientName": "test",
+      "docType": "raduser",
+      "userName": "test",
       "config": {
         "SHA-Password": {
           "value": "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3",
@@ -99,7 +99,7 @@ Configuration
         expire = 2592000
 
         # View path for radius authentication
-        authview = "_design/client/_view/by_name"
+        authview = "_design/user/_view/by_name"
 
         #
         # Map attribute names to json element names for accounting
@@ -191,8 +191,9 @@ Notes
 -----
 
 This module was tested to handle thousands of radius requests in a short period of time from multiple (hundreds) of Aerohive Access Points pointing
-to a freeradius installation for accounting and authorization.  You should list the couchbase module in both the configuration and authorization sections
-if you are planning to use it for both purposes.  You should also have PAP enabled for authenticating users based on cleartext or hashed password attributes.
+to a FreeRADIUS installation for accounting and authorization.  You should list the couchbase module in both the accounting, preacct and authorization sections
+of your site configuration if you are planning to use it for both purposes.
+You should also have PAP enabled for authenticating users based on cleartext or hashed password attributes.
 As always YMMV.
 
-This module was built and tested against freeradius-server master branch as of the latest commit to this branch.
+This module was built and tested against the FreeRADIUS 3.0.0 release branch (FreeRADIUS/freeradius-server/tree/release_branch_3.0.0) as of the latest commit to this branch.
