@@ -185,9 +185,9 @@ json_object *mod_value_pair_to_json_object(VALUE_PAIR *vp) {
                 /* return as 64 bit int - because it is a 64 bit int */
                 return json_object_new_int64(vp->vp_integer64);
             break;
-        default:
-            /* silence warnings - do nothing */
-        break;
+            default:
+                /* silence warnings - do nothing */
+            break;
         }
     }
 
