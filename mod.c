@@ -169,22 +169,25 @@ json_object *mod_value_pair_to_json_object(VALUE_PAIR *vp) {
                 /* skip if we have flags */
                 if (vp->da->flags.has_value) break;
                 /* debug */
-                DEBUG("rlm_couchbase: assigning int/byte/short '%s' as integer", vp->da->name);
-                /* return as int */
-                return json_object_new_int(vp->vp_integer);
+                DEBUG("rlm_couchbase: creating new int64 for unsigned 32 bit int/byte/short '%s'", vp->da->name);
+                /* return as 64 bit int - json-c does not seem to support unsigned 32 bit ints */
+                return json_object_new_int64(vp->vp_integer);
             break;
             case PW_TYPE_SIGNED:
                 /* debug */
-                DEBUG("rlm_couchbase: assigning signed '%s' as integer", vp->da->name);
-                /* return as int */
-                return json_object_new_int(vp->vp_signed);
+                DEBUG("rlm_couchbase: creating new int64 for signed 32 bit integer '%s'", vp->da->name);
+                /* return as 64 bit int - json-c represents all ints as 64 bits internally */
+                return json_object_new_int64(vp->vp_signed);
             break;
             case PW_TYPE_INTEGER64:
                 /* debug */
-                DEBUG("rlm_couchbase: assigning int64 '%s' as 64 bit integer", vp->da->name);
-                /* return as 64 bit int */
+                DEBUG("rlm_couchbase: creating new int64 for 64 bit integer", vp->da->name);
+                /* return as 64 bit int - because it is a 64 bit int */
                 return json_object_new_int64(vp->vp_integer64);
             break;
+        default:
+            /* silence warnings - do nothing */
+        break;
         }
     }
 
