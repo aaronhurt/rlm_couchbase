@@ -319,10 +319,10 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         RDEBUG("rlm_couchbase: could not find status type in packet");
         /* return */
         return RLM_MODULE_NOOP;
-    } else {
-        /* set status */
-        status = vp->vp_integer;
     }
+
+    /* set status */
+    status = vp->vp_integer;
 
     /* acknowledge the request but take no action */
     if (status == PW_STATUS_ACCOUNTING_ON || status == PW_STATUS_ACCOUNTING_OFF) {
@@ -427,7 +427,11 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
             mod_ensure_start_timestamp(cookie->jobj, request->packet->vps);
         break;
         default:
-            /* do nothing */
+            /* we shouldn't get here - free json object */
+            json_object_put(cookie->jobj);
+            /* release our connection handle */
+            fr_connection_release(inst->pool, handle);
+            /* return without doing anything */
             return RLM_MODULE_NOOP;
         break;
     }
