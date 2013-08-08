@@ -181,7 +181,7 @@ json_object *mod_value_pair_to_json_object(VALUE_PAIR *vp) {
             break;
             case PW_TYPE_INTEGER64:
                 /* debug */
-                DEBUG("rlm_couchbase: creating new int64 for 64 bit integer", vp->da->name);
+                DEBUG("rlm_couchbase: creating new int64 for 64 bit integer '%s'", vp->da->name);
                 /* return as 64 bit int - because it is a 64 bit int */
                 return json_object_new_int64(vp->vp_integer64);
             break;

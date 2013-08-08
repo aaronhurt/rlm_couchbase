@@ -36,7 +36,7 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
 
     /* fail on bad config */
     if (cf_section_parse(conf, inst, module_config) < 0) {
-        ERROR("rlm_couchbase: failed to parse config!");
+        ERROR("rlm_couchbase: failed to parse config");
         /* fail */
         return -1;
     }
@@ -89,10 +89,10 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
         uname = vp->vp_strvalue;
     /* fail */
     } else {
-        /* log error */
-        RERROR("rlm_couchbase: failed to find valid username for authorization");
+        /* log debug */
+        RDEBUG("rlm_couchbase: failed to find valid username for authorization");
         /* return */
-        return RLM_MODULE_INVALID;
+        return RLM_MODULE_FAIL;
     }
 
     /* get handle */
@@ -314,19 +314,22 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     rad_assert(request->packet != NULL);
 
     /* sanity check */
-    if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE, 0, TAG_ANY)) != NULL) {
+    if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE, 0, TAG_ANY)) == NULL) {
+        /* log debug */
+        RDEBUG("rlm_couchbase: could not find status type in packet");
+        /* return */
+        return RLM_MODULE_NOOP;
+    } else {
         /* set status */
         status = vp->vp_integer;
-    } else {
-        /* log error */
-        RERROR("rlm_couchbase: could not find status type in packet.");
-        /* return */
-        return RLM_MODULE_INVALID;
     }
 
-    /* return on status we don't handle */
+    /* acknowledge the request but take no action */
     if (status == PW_STATUS_ACCOUNTING_ON || status == PW_STATUS_ACCOUNTING_OFF) {
-        return RLM_MODULE_NOOP;
+        /* log debug */
+        RDEBUG("rlm_couchbase: handling accounting on/off request without action");
+        /* return */
+        return RLM_MODULE_OK;
     }
 
     /* get handle */
@@ -360,11 +363,11 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     /* attempt to build document key */
     if (radius_xlat(key, sizeof(key), request, inst->key, NULL, NULL) < 0) {
         /* log error */
-        RERROR("rlm_couchbase: could not find key attribute (%s) in packet!", inst->key);
+        RERROR("rlm_couchbase: could not find key attribute (%s) in packet", inst->key);
         /* release handle */
         fr_connection_release(inst->pool, handle);
         /* return */
-        return RLM_MODULE_INVALID;
+        return RLM_MODULE_NOOP;
     } else {
         /* init cookie error status */
         cookie->jerr = json_tokener_success;
@@ -425,6 +428,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         break;
         default:
             /* do nothing */
+            return RLM_MODULE_NOOP;
         break;
     }
 
