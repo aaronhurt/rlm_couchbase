@@ -33,6 +33,9 @@ void *mod_conn_create(void *instance) {
     chandle = talloc_zero(inst, rlm_couchbase_handle_t);
     cookie = talloc_zero(chandle, cookie_t);
 
+    /* initialize cookie->jerr */
+    cookie->jerr = LCB_SUCCESS;
+
     /* populate handle with allocated structs */
     chandle->cookie = cookie;
     chandle->handle = cb_inst;
