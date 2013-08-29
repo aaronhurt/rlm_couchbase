@@ -12,7 +12,7 @@ RCSID("$Id$")
 /* create new connection pool handle */
 void *mod_conn_create(void *instance) {
     rlm_couchbase_t *inst = instance;           /* module instance pointer */
-    rlm_couchbase_handle_t *handle_t = NULL;    /* connection handle pointer */
+    rlm_couchbase_handle_t *chandle = NULL;     /* connection handle pointer */
     cookie_t *cookie = NULL;                    /* couchbase cookie */
     lcb_t cb_inst;                              /* couchbase connection instance */
     lcb_error_t cb_error = LCB_SUCCESS;         /* couchbase error status */
@@ -23,32 +23,53 @@ void *mod_conn_create(void *instance) {
     /* check couchbase instance status */
     if ((cb_error = lcb_get_last_error(cb_inst)) != LCB_SUCCESS) {
         ERROR("rlm_couchbase: failed to initiate couchbase connection: %s (0x%x)", lcb_strerror(NULL, cb_error), cb_error);
+        /* destroy/free couchbase instance */
+        lcb_destroy(cb_inst);
         /* fail */
         return NULL;
     }
 
     /* allocate memory for couchbase connection instance abstraction */
-    handle_t = talloc_zero(inst, rlm_couchbase_handle_t);
-    cookie = talloc_zero(handle_t, cookie_t);
+    chandle = talloc_zero(inst, rlm_couchbase_handle_t);
+    cookie = talloc_zero(chandle, cookie_t);
 
     /* populate handle with allocated structs */
-    handle_t->cookie = cookie;
-    handle_t->handle = cb_inst;
+    chandle->cookie = cookie;
+    chandle->handle = cb_inst;
 
     /* return handle struct */
-    return handle_t;
+    return chandle;
+}
+
+/* verify valid couchbase connection handle */
+int mod_conn_alive(UNUSED void *instance, void *handle) {
+    rlm_couchbase_handle_t *chandle = handle;   /* connection handle pointer */
+    lcb_t cb_inst = chandle->handle;            /* couchbase instance */
+    lcb_error_t cb_error = LCB_SUCCESS;         /* couchbase error status */
+
+    /* attempt to get server list */
+    const char *const *servers = lcb_get_server_list(cb_inst);
+
+    /* check error state and server list return */
+    if (((cb_error = lcb_get_last_error(cb_inst)) != LCB_SUCCESS) || (servers == NULL)) {
+        /* log error */
+        ERROR("rlm_couchbase: failed to get couchbase server topology: %s (0x%x)", lcb_strerror(NULL, cb_error), cb_error);
+        /* return false */
+        return false;
+    }
+    return true;
 }
 
 /* free couchbase instance handle and any additional context memory */
 int mod_conn_delete(UNUSED void *instance, void *handle) {
-    rlm_couchbase_handle_t *handle_t = handle;      /* connection instance handle */
-    lcb_t cb_inst = handle_t->handle;               /* couchbase instance */
+    rlm_couchbase_handle_t *chandle = handle;       /* connection instance handle */
+    lcb_t cb_inst = chandle->handle;                /* couchbase instance */
 
     /* destroy/free couchbase instance */
     lcb_destroy(cb_inst);
 
     /* free handle */
-    talloc_free(handle_t);
+    talloc_free(chandle);
 
     /* return */
     return true;

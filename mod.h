@@ -37,6 +37,8 @@ typedef struct rlm_couchbase_handle_t {
 /* define functions */
 void *mod_conn_create(void *instance);
 
+int mod_conn_alive(UNUSED void *instance, void *handle);
+
 int mod_conn_delete(UNUSED void *instance, void *handle);
 
 int mod_attribute_to_element(const char *name, json_object *map, void *attribute);
