@@ -105,7 +105,7 @@ Configuration
 
         #
         # Map attribute names to json element names for accounting
-        # documents.  Atrributes noot in this map will not be recorded.
+        # documents.  Atrributes not in this map will not be recorded.
         # This map should be a valid JSON document.
         #
         map = "{ \
