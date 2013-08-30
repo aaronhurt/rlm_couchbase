@@ -25,7 +25,6 @@ Example from an Aerohive Wireless Access Point:
       "callingStationId": "8C-2D-AA-72-36-BA",
       "nasPortType": 19,
       "connectInfo": "11ng",
-      "class": "0x494a05120000013700010200ac1b020300000000000000000000000001ce741530c34784000000000001be35",
       "sessionTime": 5821,
       "inputPackets": 5591,
       "inputOctets": 681742,
