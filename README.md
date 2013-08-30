@@ -144,37 +144,37 @@ Configuration
             # Number of connections to start
             start = 5
 
-            # Minimum number of connections to keep open.
-            #
-            # NOTE: This should be greater than or equal to spare below.
+            # Minimum number of connections to keep open
             min = 5
 
             # Maximum number of connections
             #
             # If these connections are all in use and a new one
             # is requested, the request will NOT get a connection.
+            #
+            # NOTE: This should be greater than or equal to "min" above.
             max = 20
 
             # Spare connections to be left idle
             #
             # NOTE: Idle connections WILL be closed if "idle_timeout"
-            # is set.
-            spare = 5
+            # is set.  This should be less than or equal to "max" above.
+            spare = 15
 
             # Number of uses before the connection is closed
             #
-            # 0 means infinite (no limit)
+            # NOTE: A setting of 0 means infinite (no limit).
             uses = 0
 
             # The lifetime (in seconds) of the connection
             #
-            # 0 means infinite (no limit)
+            # NOTE: A setting of 0 means infinite (no limit).
             lifetime = 0
 
             # The idle timeout (in seconds).  A connection which is
             # unused for this length of time will be closed.
             #
-            # 0 means infinite (no timeout)
+            # NOTE: A setting of 0 means infinite (no timeout).
             idle_timeout = 1200
 
             # NOTE: All configuration settings are enforced.  If a
