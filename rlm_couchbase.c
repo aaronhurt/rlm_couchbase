@@ -262,6 +262,8 @@ static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request
 
     /* check if stripped-user-name already set */
     if (pairfind(request->packet->vps, PW_STRIPPED_USER_NAME, 0, TAG_ANY) != NULL) {
+        /* debugging */
+        RDEBUG("stripped-user-name already set - ignorning request");
         /* already set - do nothing */
         return RLM_MODULE_NOOP;
     }
@@ -271,8 +273,8 @@ static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request
         char *domain = NULL, *uname = NULL, *buff = NULL;   /* username and domain containers */
         size_t size;                                        /* size of user name string */
 
-        /* allocate buffer and get size */
-        buff = talloc_zero_size(inst, (size = (strlen(vp->vp_strvalue) + 1)));
+        /* allocate buffer in the request and set size to one more than username length */
+        buff = talloc_zero_size(request, (size = (strlen(vp->vp_strvalue) + 1)));
 
         /* pass to our split function */
         uname = mod_split_user_domain(vp->vp_strvalue, buff, size, &domain);
@@ -290,8 +292,8 @@ static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request
         /* free uname */
         talloc_free(buff);
 
-        /* return okay */
-        return RLM_MODULE_OK;
+        /* return updated - continue with other modules */
+        return RLM_MODULE_UPDATED;
     }
 
     /* return noop */
