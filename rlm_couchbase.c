@@ -15,14 +15,13 @@ RCSID("$Id$")
 
 /* map config to internal variables */
 static const CONF_PARSER module_config[] = {
-    {"key", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, key), NULL, "radacct_%{Acct-Session-Id}"},
+    {"acctkey", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, acctkey), NULL, "radacct_%{%{Acct-Unique-Session-Id}:-%{Acct-Session-Id}}"},
     {"doctype", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, doctype), NULL, "radacct"},
     {"server", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, server), NULL, NULL},
     {"bucket", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, bucket), NULL, NULL},
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     {"expire", PW_TYPE_INTEGER, offsetof(rlm_couchbase_t, expire), NULL, 0},
-    {"authview", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, authview), NULL, NULL},
-    {"viewtimeout", PW_TYPE_INTEGER | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, viewtimeout), NULL, NULL},
+    {"userkey", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, userkey), NULL, "raduser_%{md5:%{tolower:%{User-Name}}}"},
     {"map", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, map), NULL, NULL},
     {NULL, -1, 0, NULL, NULL}     /* end the list */
 };
@@ -72,11 +71,9 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     rlm_couchbase_t *inst = instance;       /* our module instance */
     void *handle = NULL;                    /* connection pool handle */
     VALUE_PAIR *vp;                         /* value pair pointer */
-    char vpath[256], docid[256];            /* view path and document id */
+    char dockey[MAX_KEY_SIZE];              /* our document key */
     const char *uname = NULL;               /* username pointer */
-    size_t length;                          /* string length buffer */
     lcb_error_t cb_error = LCB_SUCCESS;     /* couchbase error holder */
-    json_object *json, *jval;               /* json object holders */
 
     /* assert packet as not null */
     rad_assert(request->packet != NULL);
@@ -123,138 +120,52 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
         return RLM_MODULE_FAIL;
     }
 
-    /* build view path */
-    snprintf(vpath, sizeof(vpath), "%s?stale=false&limit=1&connection_timeout=%1u&key=\"%s\"",
-        inst->authview, inst->viewtimeout, uname);
+    /* attempt to build document key */
+    if (radius_xlat(dockey, sizeof(dockey), request, inst->userkey, NULL, NULL) < 0) {
+        /* log error */
+        RERROR("rlm_couchbase: could not find user key attribute (%s) in packet", inst->userkey);
+        /* release handle */
+        fr_connection_release(inst->pool, handle);
+        /* return */
+        return RLM_MODULE_FAIL;
+    }
 
-    /* init cookie error status */
+    /* reset  cookie error status */
     cookie->jerr = json_tokener_success;
 
-    /* setup cookie tokener */
-    cookie->jtok = json_tokener_new();
-
-    /* query view for document */
-    cb_error = couchbase_query_view(cb_inst, cookie, vpath, NULL);
-
-    /* free json token */
-    json_tokener_free(cookie->jtok);
+    /* fetch document */
+    cb_error = couchbase_get_key(cb_inst, cookie, dockey);
 
     /* check error */
-    if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
+    if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success || cookie->jobj == NULL) {
         /* log error */
-        RERROR("rlm_couchbase: failed to execute view request or parse return");
+        RERROR("failed to fetch document or parse return");
         /* free json object */
         json_object_put(cookie->jobj);
         /* release handle */
         fr_connection_release(inst->pool, handle);
         /* return */
         return RLM_MODULE_FAIL;
-    }
-
-    /* debugging */
-    RDEBUG("cookie->jobj == %s", json_object_to_json_string(cookie->jobj));
-
-    /* check for error in json object */
-    if (cookie->jobj != NULL && json_object_object_get_ex(cookie->jobj, "error", &json)) {
-        char error[512];
-        /* get length */
-        length = json_object_get_string_len(json);
-        /* check length and copy to error buffer */
-        if (length < sizeof(error) -1) {
-            strncpy(error, json_object_get_string(json), length);
-        }
-        /* get error reason */
-        if (json_object_object_get_ex(cookie->jobj, "reason", &json)) {
-            /* get length */
-            length = json_object_get_string_len(json);
-            /* check length and add to error buffer */
-            if (length + strlen(error) < sizeof(error) -4) {
-                /* add spacing */
-                strncat(error, " - ", 3);
-                /* append reason */
-                strncat(error, json_object_get_string(json), length);
-            }
-        }
-        /* log error */
-        RERROR("view request failed: %s", error);
-        /* free json object */
-        json_object_put(cookie->jobj);
-        /* release handle */
-        fr_connection_release(inst->pool, handle);
-        /* return */
-        return RLM_MODULE_FAIL;
-    }
-
-    /* clear docid */
-    memset(docid, 0, sizeof(docid));
-
-    /* check for document id in return */
-    if (cookie->jobj != NULL && json_object_object_get_ex(cookie->jobj, "rows", &json)) {
-        /* check for valid row value */
-        if (json_object_is_type(json, json_type_array) && json_object_array_length(json) > 0) {
-            /* attempt to get id of first index of array */
-            json = json_object_array_get_idx(json, 0);
-            /* get document id */
-            if (json_object_object_get_ex(json, "id", &jval)) {
-                /* get length */
-                length = json_object_get_string_len(jval);
-                /* check length and copy string */
-                if (length < sizeof(docid) -1) {
-                    strncpy(docid, json_object_get_string(jval), length);
-                }
-            }
-        }
-    }
-
-    /* free json object */
-    json_object_put(cookie->jobj);
-
-    /* check for valid doc id */
-    if (docid[0] != 0) {
-        /* reset  cookie error status */
-        cookie->jerr = json_tokener_success;
-
-        /* fetch document */
-        cb_error = couchbase_get_key(cb_inst, cookie, docid);
-
-        /* check error */
-        if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
-            /* log error */
-            RERROR("failed to execute get request or parse return");
-            /* free json object */
-            json_object_put(cookie->jobj);
-            /* release handle */
-            fr_connection_release(inst->pool, handle);
-            /* return */
-            return RLM_MODULE_FAIL;
-        }
-
-        /* release handle */
-        fr_connection_release(inst->pool, handle);
-
-        /* debugging */
-        RDEBUG("cookie->jobj == %s", json_object_to_json_string(cookie->jobj));
-
-        /* inject config value pairs defined in this json oblect */
-        mod_json_object_to_value_pairs(cookie->jobj, "config", request);
-
-        /* inject config value pairs defined in this json oblect */
-        mod_json_object_to_value_pairs(cookie->jobj, "reply", request);
-
-        /* return okay */
-        return RLM_MODULE_OK;
     }
 
     /* release handle */
     fr_connection_release(inst->pool, handle);
 
-    /* default fail */
-    return RLM_MODULE_FAIL;
+    /* debugging */
+    RDEBUG("parsed user document == %s", json_object_to_json_string(cookie->jobj));
+
+    /* inject config value pairs defined in this json oblect */
+    mod_json_object_to_value_pairs(cookie->jobj, "config", request);
+
+    /* inject config value pairs defined in this json oblect */
+    mod_json_object_to_value_pairs(cookie->jobj, "reply", request);
+
+    /* return okay */
+    return RLM_MODULE_OK;
 }
 
 /* misc data manipulation before recording accounting data */
 static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request) {
-    rlm_couchbase_t *inst = instance;       /* our module instance */
     VALUE_PAIR *vp;                         /* radius value pair linked list */
 
     /* assert packet as not null */
@@ -305,11 +216,11 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     rlm_couchbase_t *inst = instance;   /* our module instance */
     void *handle = NULL;                /* connection pool handle */
     VALUE_PAIR *vp;                     /* radius value pair linked list */
-    char key[MAX_KEY_SIZE];             /* our document key */
+    char dockey[MAX_KEY_SIZE];          /* our document key */
     char document[MAX_VALUE_SIZE];      /* our document body */
     char element[MAX_KEY_SIZE];         /* mapped radius attribute to element name */
     int status = 0;                     /* account status type */
-    int docfound = 0;                   /* document get toggle */
+    int docfound = 0;                   /* document found toggle */
     lcb_error_t cb_error = LCB_SUCCESS; /* couchbase error holder */
 
     /* assert packet as not null */
@@ -363,34 +274,34 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     }
 
     /* attempt to build document key */
-    if (radius_xlat(key, sizeof(key), request, inst->key, NULL, NULL) < 0) {
+    if (radius_xlat(dockey, sizeof(dockey), request, inst->acctkey, NULL, NULL) < 0) {
         /* log error */
-        RERROR("rlm_couchbase: could not find key attribute (%s) in packet", inst->key);
+        RERROR("rlm_couchbase: could not find accounting key attribute (%s) in packet", inst->acctkey);
         /* release handle */
         fr_connection_release(inst->pool, handle);
         /* return */
         return RLM_MODULE_NOOP;
+    }
+
+    /* init cookie error status */
+    cookie->jerr = json_tokener_success;
+
+    /* attempt to fetch document */
+    cb_error = couchbase_get_key(cb_inst, cookie, dockey);
+
+    /* check error */
+    if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
+        /* log error */
+        RERROR("rlm_couchbase: failed to execute get request or parse returned json object");
+        /* free json object */
+        json_object_put(cookie->jobj); 
     } else {
-        /* init cookie error status */
-        cookie->jerr = json_tokener_success;
-
-        /* attempt to fetch document */
-        cb_error = couchbase_get_key(cb_inst, cookie, key);
-
-        /* check error */
-        if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
-            /* log error */
-            RERROR("rlm_couchbase: failed to execute get request or parse returned json object");
-            /* free json object */
-            json_object_put(cookie->jobj); 
-        } else {
-            /* check cookie json object */
-            if (cookie->jobj != NULL) {
-                /* set doc found */
-                docfound = 1;
-                /* debugging */
-                RDEBUG("parsed json body from couchbase: %s", json_object_to_json_string(cookie->jobj));
-            }
+        /* check cookie json object */
+        if (cookie->jobj != NULL) {
+            /* set doc found */
+            docfound = 1;
+            /* debugging */
+            RDEBUG("parsed json body from couchbase: %s", json_object_to_json_string(cookie->jobj));
         }
     }
 
@@ -467,14 +378,14 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     }
 
     /* debugging */
-    RDEBUG("setting '%s' => '%s'", key, document);
+    RDEBUG("setting '%s' => '%s'", dockey, document);
 
     /* store document/key in couchbase */
-    cb_error = couchbase_set_key(cb_inst, key, document, inst->expire);
+    cb_error = couchbase_set_key(cb_inst, dockey, document, inst->expire);
 
     /* check return */
     if (cb_error != LCB_SUCCESS) {
-        RERROR("rlm_couchbase: failed to store document (%s): %s (0x%x)", key, lcb_strerror(NULL, cb_error), cb_error);
+        RERROR("rlm_couchbase: failed to store document (%s): %s (0x%x)", dockey, lcb_strerror(NULL, cb_error), cb_error);
     }
 
     /* release handle */

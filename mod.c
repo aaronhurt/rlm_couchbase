@@ -34,7 +34,7 @@ void *mod_conn_create(void *instance) {
     cookie = talloc_zero(chandle, cookie_t);
 
     /* initialize cookie error holder */
-    cookie->jerr = LCB_SUCCESS;
+    cookie->jerr = json_tokener_success;
 
     /* populate handle with allocated structs */
     chandle->cookie = cookie;

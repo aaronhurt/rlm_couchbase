@@ -39,13 +39,9 @@ Example from an Aerohive Wireless Access Point:
       "strippedUserDomain": "blargs.com"
     }
 
-The module is also capable of authorizing users via documents stored in couchbase.  The document keys should be returned via a simple view like the following:
+The module is also capable of authorizing users via documents stored in couchbase.  The document keys should be deterministic based on information available in the document.  The format of those keys may be specified in unlang like the example below:
 
-    function (doc, meta) {
-      if (doc.docType && doc.docType == "raduser" && doc.userName) {
-        emit(doc.userName, null);
-      }
-    }
+    userkey = "raduser_%{md5:%{tolower:%{User-Name}}}"
 
 The document structure is straight forward and flexible:
 
@@ -76,8 +72,8 @@ Configuration
 -------------
 
     couchbase {
-        # Couchbase document key (unlang supported)
-        key = "radacct_%{%{Acct-Unique-Session-Id}:-%{Acct-Session-Id}}"
+        # Couchbase document key for accounting documents (unlang supported)
+        acctkey = "radacct_%{%{Acct-Unique-Session-Id}:-%{Acct-Session-Id}}"
 
         # Value for the 'docType' element in the json document body
         doctype = "radacct"
@@ -97,11 +93,8 @@ Configuration
         ## Document expire time in seconds (0 = never)
         expire = 2592000
 
-        # View path for radius authentication
-        authview = "_design/user/_view/by_name"
-
-        # View timeout in milliseconds
-        viewtimeout = 10000
+        # Couchbase document key for user documents (unlang supported)
+        userkey = "raduser_%{md5:%{tolower:%{User-Name}}}"
 
         #
         # Map attribute names to json element names for accounting

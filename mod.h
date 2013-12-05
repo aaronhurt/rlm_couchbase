@@ -15,14 +15,13 @@ RCSIDH(util_h, "$Id$");
 
 /* configuration struct */
 typedef struct rlm_couchbase_t {
-    const char *key;                /* document key */
+    const char *acctkey;            /* accounting document key */
     const char *doctype;            /* value of 'docType' element name */
     const char *server;             /* couchbase server list */
     const char *bucket;             /* couchbase bucket */
     const char *pass;               /* couchbase bucket password */
     unsigned int expire;            /* document expire time in seconds */
-    const char *authview;           /* couchbase view path for client authorization */
-    unsigned int viewtimeout;       /* couchbase view timeout in milliseconds */
+    const char *userkey;            /* user document key */
     const char *map;                /* user defined attribute map */
     json_object *map_object;        /* json object for parsed attribute map */
     fr_connection_pool_t *pool;     /* connection pool */
