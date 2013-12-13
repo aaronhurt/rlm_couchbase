@@ -75,7 +75,7 @@ Configuration
         # Couchbase document key for accounting documents (unlang supported)
         acctkey = "radacct_%{%{Acct-Unique-Session-Id}:-%{Acct-Session-Id}}"
 
-        # Value for the 'docType' element in the json document body
+        # Value for the 'docType' element in the json body for accounting documents
         doctype = "radacct"
 
         #
@@ -191,4 +191,5 @@ of your site configuration if you are planning to use it for both purposes.
 You should also have PAP enabled for authenticating users based on cleartext or hashed password attributes.
 As always YMMV.
 
-This module was built and tested against the [FreeRADIUS 3.0.0 release branch](https://github.com/FreeRADIUS/freeradius-server/tree/release_branch_3.0.0).
+This module was built and tested against the latest [FreeRADIUS v3.0.x branch](https://github.com/FreeRADIUS/freeradius-server/tree/v3.0.x) as of the most
+current commit to this repository.
