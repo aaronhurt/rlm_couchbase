@@ -136,13 +136,27 @@ void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQ
 
     /* get config payload */
     if (json_object_object_get_ex(json, section, &jobj)) {
+        /* make sure we have the correct type */
+        if (!json_object_is_type(jobj, json_type_object)) {
+            /* log error */
+            RERROR("rlm_couchbase: invalid json type for %s section - sections must be json objects", section);
+            /* reuturn */
+            return NULL;
+        }
         /* loop through object */
         json_object_object_foreachC(jobj, iter) {
             /* debugging */
             RDEBUG("parsing %s attribute %s => %s", section, iter.key, json_object_to_json_string(iter.val));
+            /* check for appropriate type in value and op */
+            if (!json_object_is_type(iter.val, json_type_object)) {
+                /* log error */
+                RERROR("rlm_couchbase: invalid json type for attribute %s - attributes must be json objects", iter.key);
+                /* return */
+                return NULL;
+            }
             /* create pair from json object */
             if (json_object_object_get_ex(iter.val, "value", &jval) &&
-            json_object_object_get_ex(iter.val, "op", &jval2)) {
+                json_object_object_get_ex(iter.val, "op", &jval2)) {
                 /* make correct pairs based on json object type */
                 switch (json_object_get_type(jval)) {
                     case json_type_double:
@@ -170,6 +184,9 @@ void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQ
                         RERROR("rlm_couchbase: skipping unhandled json type in value pair object");
                     break;
                 }
+            } else {
+                /* log error */
+                RERROR("rlm_couchbase: failed to get value or op for attribute %s", iter.key);
             }
         }
     }
