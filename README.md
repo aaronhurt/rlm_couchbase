@@ -185,7 +185,7 @@ Configuration
 Notes
 -----
 
-This module was tested to handle thousands of radius requests in a short period of time from several thousand of Aerohive Access Points pointing
+This module was tested to handle thousands of radius requests in a short period of time from several thousand Aerohive Access Points pointing
 to a FreeRADIUS installation for accounting and authorization.  You should list the couchbase module in both the accounting, preacct and authorization sections
 of your site configuration if you are planning to use it for both purposes.
 You should also have PAP enabled for authenticating users based on cleartext or hashed password attributes.
