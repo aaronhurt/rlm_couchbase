@@ -22,13 +22,17 @@ static const CONF_PARSER module_config[] = {
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     {"expire", PW_TYPE_INTEGER, offsetof(rlm_couchbase_t, expire), NULL, 0},
     {"userkey", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, userkey), NULL, "raduser_%{md5:%{tolower:%{User-Name}}}"},
-    {"map", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, map), NULL, NULL},
     {NULL, -1, 0, NULL, NULL}     /* end the list */
 };
 
 /* initialize couchbase connection */
 static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
-    enum json_tokener_error json_error = json_tokener_success;  /* json parse error */
+    CONF_SECTION *cs;   /* config section */
+    CONF_ITEM *ci;      /* config item */
+    CONF_PAIR *cp;      /* config pair */
+    char const *attr;   /* attribute name */
+    char const *value;  /* attribute value */
+
 
     /* build instance */
     rlm_couchbase_t *inst = instance;
@@ -40,18 +44,39 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
         return -1;
     }
 
-    /* parse json body from config */
-    inst->map_object = json_tokener_parse_verbose(inst->map, &json_error);
+    /* find map section */
+    cs = cf_section_find("map");
 
-    /* check error */
-    if (json_error != json_tokener_success) {
-        /* log error */
-        ERROR("rlm_couchbase: failed to parse attribute map: %s", json_tokener_error_desc(json_error));
-        /* cleanup json object */
-        json_object_put(inst->map_object);
+    /* check section */
+    if (!cs) {
+        ERROR("rlm_couchbase: failed to find 'map' in config");
         /* fail */
         return -1;
     }
+
+    /* parse update section */
+    for (ci = cf_item_find_next(cs, NULL); ci != NULL; ci = cf_item_find_next(cs, ci)) {
+        /* validate item */
+        if (!cf_item_is_pair(ci)) {
+            DEBUG("rlm_couchbase: skipping invalid item not in \"radius-attribute = json-element\" format");
+            return -1;
+        }
+
+        /* get value pair from item */
+        cp = cf_itemtopair(ci);
+
+        /* get pair value */
+        value = cf_pair_value(cp);
+
+        /* get pair name */
+        attr = cf_pair_attr(cp);
+
+        /* debugging */
+        DEBUG("rlm_couchbase: found attribute '%s' and value '%s' in update section", attr, value);
+    }
+
+    /* exit */
+    return -1;
 
     /* initiate connection pool */
     inst->pool = fr_connection_pool_init(conf, inst, mod_conn_create, mod_conn_alive, mod_conn_delete, NULL);
