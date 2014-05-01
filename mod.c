@@ -80,7 +80,6 @@ int mod_conn_delete(UNUSED void *instance, void *handle) {
 
 /* map free radius attribute to user defined json element name */
 int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
-    CONF_ITEM *ci;                      /* config item */
     CONF_PAIR *cp;                      /* config pair */
     const char *attribute, *value;      /* config pair attibute and value */
     int length;                         /* attribute value length */
@@ -89,7 +88,7 @@ int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
     memset((char *) buf, 0, MAX_KEY_SIZE);
 
     /* find pair */
-    cp = cf_pair_find(inst->map, name)
+    cp = cf_pair_find(map, name);
 
     /* check pair and map attribute */
     if (cp) {
@@ -100,7 +99,7 @@ int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
         /* sanity check */
         if (attribute && value && (strcmp(attribute, name) == 0)) {
             /* get length */
-            int length = strlen(value);
+            length = (strlen(value) + 1);
             /* check buffer size */
             if (length > MAX_KEY_SIZE -1) {
                 /* oops ... this value is bigger than our buffer ... error out */
