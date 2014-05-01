@@ -45,11 +45,11 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     }
 
     /* find map section */
-    cs = cf_section_find("map");
+    cs = cf_section_sub_find(conf, "map");
 
     /* check section */
     if (!cs) {
-        ERROR("rlm_couchbase: failed to find 'map' in config");
+        ERROR("rlm_couchbase: failed to find 'map' section in config");
         /* fail */
         return -1;
     }
@@ -58,7 +58,7 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     for (ci = cf_item_find_next(cs, NULL); ci != NULL; ci = cf_item_find_next(cs, ci)) {
         /* validate item */
         if (!cf_item_is_pair(ci)) {
-            DEBUG("rlm_couchbase: skipping invalid item not in \"radius-attribute = json-element\" format");
+            DEBUG("rlm_couchbase: invalid item in 'map' section");
             return -1;
         }
 
@@ -72,7 +72,7 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
         attr = cf_pair_attr(cp);
 
         /* debugging */
-        DEBUG("rlm_couchbase: found attribute '%s' and value '%s' in update section", attr, value);
+        DEBUG("rlm_couchbase: found attribute '%s' and value '%s' in map section", attr, value);
     }
 
     /* exit */
