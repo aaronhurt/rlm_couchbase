@@ -72,12 +72,6 @@ Configuration
 -------------
 
     couchbase {
-        # Couchbase document key for accounting documents (unlang supported)
-        acctkey = "radacct_%{%{Acct-Unique-Session-Id}:-%{Acct-Session-Id}}"
-
-        # Value for the 'docType' element in the json body for accounting documents
-        doctype = "radacct"
-
         #
         # List of Couchbase hosts semi-colon separated.  Ports are optional if servers
         # are listening on the standard port.  Complete pool urls are preferred.
@@ -90,44 +84,55 @@ Configuration
         # Couchbase bucket password
         #pass = "password"
 
-        ## Document expire time in seconds (0 = never)
+        # Couchbase accounting document key (unlang supported)
+        acctkey = "radacct_%{%{Acct-Unique-Session-Id}:-%{Acct-Session-Id}}"
+
+        # Value for the 'docType' element in the json body for accounting documents
+        doctype = "radacct"
+
+        ## Accounting document expire time in seconds (0 = never)
         expire = 2592000
+
+        #
+        # Map attribute names to json element names for accounting.
+        #
+        # Configuration items are in the format:
+        # <radius attribute> = <element name>
+        #
+        # JSON element names should be single quoted.
+        #
+        # Note: Atrributes not in this map will not be recorded.
+        #
+        map {
+            Acct-Session-Id = 'sessionId'
+            Acct-Unique-Session-Id = 'uniqueId'
+            Acct-Status-Type = 'lastStatus'
+            Acct-Authentic = 'authentic'
+            User-Name = 'userName'
+            Stripped-User-Name = 'strippedUserName'
+            Stripped-User-Domain = 'strippedUserDomain'
+            Realm = 'realm'
+            NAS-IP-Address = 'nasIpAddress'
+            NAS-Identifier = 'nasIdentifier'
+            NAS-Port = 'nasPort'
+            Called-Station-Id = 'calledStationId'
+            Called-Station-SSID = 'calledStationSSID'
+            Calling-Station-Id = 'callingStationId'
+            Framed-IP-Address = 'framedIpAddress'
+            NAS-Port-Type = 'nasPortType'
+            Connect-Info = 'connectInfo'
+            Acct-Session-Time = 'sessionTime'
+            Acct-Input-Packets = 'inputPackets'
+            Acct-Output-Packets = 'outputPackets'
+            Acct-Input-Octets = 'inputOctets'
+            Acct-Output-Octets = 'outputOctets'
+            Acct-Input-Gigawords = 'inputGigawords'
+            Acct-Output-Gigawords = 'outputGigawords'
+            Event-Timestamp = 'lastUpdated'
+        }
 
         # Couchbase document key for user documents (unlang supported)
         userkey = "raduser_%{md5:%{tolower:%{User-Name}}}"
-
-        #
-        # Map attribute names to json element names for accounting
-        # documents.  Atrributes not in this map will not be recorded.
-        # This map should be a valid JSON document.
-        #
-        map = "{ \
-                \"Acct-Session-Id\": \"sessionId\", \
-                \"Acct-Unique-Session-Id\": \"uniqueId\", \
-                \"Acct-Status-Type\": \"lastStatus\", \
-                \"Acct-Authentic\": \"authentic\", \
-                \"User-Name\": \"userName\", \
-                \"Stripped-User-Name\": \"strippedUserName\", \
-                \"Stripped-User-Domain\": \"strippedUserDomain\", \
-                \"Realm\": \"realm\", \
-                \"NAS-IP-Address\": \"nasIpAddress\", \
-                \"NAS-Identifier\": \"nasIdentifier\", \
-                \"NAS-Port\": \"nasPort\", \
-                \"Called-Station-Id\": \"calledStationId\", \
-                \"Called-Station-SSID\": \"calledStationSSID\", \
-                \"Calling-Station-Id\": \"callingStationId\", \
-                \"Framed-IP-Address\": \"framedIpAddress\", \
-                \"NAS-Port-Type\": \"nasPortType\", \
-                \"Connect-Info\": \"connectInfo\", \
-                \"Acct-Session-Time\": \"sessionTime\", \
-                \"Acct-Input-Packets\": \"inputPackets\", \
-                \"Acct-Output-Packets\": \"outputPackets\", \
-                \"Acct-Input-Octets\": \"inputOctets\", \
-                \"Acct-Output-Octets\": \"outputOctets\", \
-                \"Acct-Input-Gigawords\": \"inputGigawords\", \
-                \"Acct-Output-Gigawords\": \"outputGigawords\", \
-                \"Event-Timestamp\": \"lastUpdated\" \
-        }"
 
         #
         #  The connection pool is new for 3.0, and will be used in many

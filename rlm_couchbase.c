@@ -27,13 +27,10 @@ static const CONF_PARSER module_config[] = {
 
 /* initialize couchbase connection */
 static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
-    CONF_SECTION *cs;   /* config section */
-    CONF_ITEM *ci;      /* config item */
-    CONF_PAIR *cp;      /* config pair */
-    char const *attr;   /* attribute name */
-    char const *value;  /* attribute value */
-
-
+    CONF_SECTION *cs;                   /* config section */
+    CONF_ITEM *ci;                      /* config item */
+    CONF_PAIR *cp;                      /* config pair */
+    const char *attribute, *value;      /* config pair attibute and value */
     /* build instance */
     rlm_couchbase_t *inst = instance;
 
@@ -54,11 +51,14 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
         return -1;
     }
 
+    /* create attribute map object */
+    inst->map = json_object_new_object();
+
     /* parse update section */
     for (ci = cf_item_find_next(cs, NULL); ci != NULL; ci = cf_item_find_next(cs, ci)) {
         /* validate item */
         if (!cf_item_is_pair(ci)) {
-            DEBUG("rlm_couchbase: failed to parse invalid item in 'map' section");
+            ERROR("rlm_couchbase: failed to parse invalid item in 'map' section");
             /* fail */
             return -1;
         }
@@ -66,18 +66,21 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
         /* get value pair from item */
         cp = cf_itemtopair(ci);
 
+        /* get pair attribute name */
+        attribute = cf_pair_attr(cp);
+
         /* get pair value */
         value = cf_pair_value(cp);
 
-        /* get pair name */
-        attr = cf_pair_attr(cp);
+        /* add pair name and value */
+        json_object_object_add(inst->map, attribute, json_object_new_string(value));
 
         /* debugging */
-        DEBUG("rlm_couchbase: found attribute '%s' and value '%s' in map section", attr, value);
+        DEBUG("rlm_couchbase: added attribute '%s' with value '%s' to map object", attribute, value);
     }
 
-    /* exit */
-    return -1;
+    /* debugging */
+    DEBUG("rlm_couchbase: built attribute to element map %s", json_object_to_json_string(inst->map));
 
     /* initiate connection pool */
     inst->pool = fr_connection_pool_init(conf, inst, mod_conn_create, mod_conn_alive, mod_conn_delete, NULL);
@@ -378,7 +381,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     /* loop through pairs and add to json document */
     for (vp = request->packet->vps; vp; vp = vp->next) {
         /* map attribute to element */
-        if (mod_attribute_to_element(vp->da->name, inst->map_object, &element) == 0) {
+        if (mod_attribute_to_element(vp->da->name, inst->map, &element) == 0) {
             /* debug */
             RDEBUG("mapped attribute %s => %s", vp->da->name, element);
             /* add to json object with mapped name */
@@ -425,8 +428,8 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
 static int rlm_couchbase_detach(void *instance) {
     rlm_couchbase_t *inst = instance;  /* instance struct */
 
-    /* free map object */
-    json_object_put(inst->map_object);
+    /* free attribute map object */
+    json_object_put(inst->map);
 
     /* destroy connection pool */
     fr_connection_pool_delete(inst->pool);

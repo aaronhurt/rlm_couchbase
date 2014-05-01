@@ -80,7 +80,7 @@ int mod_conn_delete(UNUSED void *instance, void *handle) {
 
 /* map free radius attribute to user defined json element name */
 int mod_attribute_to_element(const char *name, json_object *map, void *buf) {
-    json_object *jval;      /* json object */
+    json_object *jval;  /* json object values */
 
     /* clear buffer */
     memset((char *) buf, 0, MAX_KEY_SIZE);

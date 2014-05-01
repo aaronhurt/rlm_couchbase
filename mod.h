@@ -22,8 +22,7 @@ typedef struct rlm_couchbase_t {
     const char *pass;               /* couchbase bucket password */
     unsigned int expire;            /* document expire time in seconds */
     const char *userkey;            /* user document key */
-    const char *map;                /* user defined attribute map */
-    json_object *map_object;        /* json object for parsed attribute map */
+    json_object *map;               /* json object to hold user defined attribute map */
     fr_connection_pool_t *pool;     /* connection pool */
 } rlm_couchbase_t;
 
