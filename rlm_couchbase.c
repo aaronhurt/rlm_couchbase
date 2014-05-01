@@ -87,6 +87,7 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
 
     /* check connection pool */
     if (!inst->pool) {
+        ERROR("rlm_couchbase: failed to initiate connection pool");
         /* fail */
         return -1;
     }
