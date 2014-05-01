@@ -159,53 +159,6 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     return RLM_MODULE_OK;
 }
 
-/* misc data manipulation before recording accounting data */
-static rlm_rcode_t rlm_couchbase_preacct(UNUSED void *instance, REQUEST *request) {
-    VALUE_PAIR *vp;                         /* radius value pair linked list */
-
-    /* assert packet as not null */
-    rad_assert(request->packet != NULL);
-
-    /* check if stripped-user-name already set */
-    if (pairfind(request->packet->vps, PW_STRIPPED_USER_NAME, 0, TAG_ANY) != NULL) {
-        /* debugging */
-        RDEBUG("stripped-user-name already set - ignorning request");
-        /* already set - do nothing */
-        return RLM_MODULE_NOOP;
-    }
-
-    /* get user string */
-    if ((vp = pairfind(request->packet->vps, PW_USER_NAME, 0, TAG_ANY)) != NULL) {
-        char *domain = NULL, *uname = NULL, *buff = NULL;   /* username and domain containers */
-        size_t size;                                        /* size of user name string */
-
-        /* allocate buffer in the request and set size to one more than username length */
-        buff = talloc_zero_size(request, (size = (strlen(vp->vp_strvalue) + 1)));
-
-        /* pass to our split function */
-        uname = mod_split_user_domain(vp->vp_strvalue, buff, size, &domain);
-
-        /* check uname and set if needed */
-        if (uname != NULL) {
-            pairmake_packet("Stripped-User-Name", uname, T_OP_SET);
-        }
-
-        /* check domain and set if needed */
-        if (domain != NULL) {
-            pairmake_packet("Stripped-User-Domain", domain, T_OP_SET);
-        }
-
-        /* free uname */
-        talloc_free(buff);
-
-        /* return updated - continue with other modules */
-        return RLM_MODULE_UPDATED;
-    }
-
-    /* return noop */
-    return RLM_MODULE_NOOP;
-}
-
 /* write accounting data to couchbase */
 static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     rlm_couchbase_t *inst = instance;   /* our module instance */
@@ -319,14 +272,14 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
             /* add start time */
             if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0, TAG_ANY)) != NULL) {
                 /* add to json object */
-                json_object_object_add(cookie->jobj, "startTimestamp", mod_value_pair_to_json_object(vp));
+                json_object_object_add(cookie->jobj, "startTimestamp", mod_value_pair_to_json_object(request, vp));
             }
         break;
         case PW_STATUS_STOP:
             /* add stop time */
             if ((vp = pairfind(request->packet->vps, PW_EVENT_TIMESTAMP, 0, TAG_ANY)) != NULL) {
                 /* add to json object */
-                json_object_object_add(cookie->jobj, "stopTimestamp", mod_value_pair_to_json_object(vp));
+                json_object_object_add(cookie->jobj, "stopTimestamp", mod_value_pair_to_json_object(request, vp));
             }
             /* check start timestamp and adjust if needed */
             mod_ensure_start_timestamp(cookie->jobj, request->packet->vps);
@@ -351,7 +304,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
             /* debug */
             RDEBUG("mapped attribute %s => %s", vp->da->name, element);
             /* add to json object with mapped name */
-            json_object_object_add(cookie->jobj, element, mod_value_pair_to_json_object(vp));
+            json_object_object_add(cookie->jobj, element, mod_value_pair_to_json_object(request, vp));
         }
     }
 
@@ -413,7 +366,7 @@ module_t rlm_couchbase = {
     {
         NULL,                       /* authentication */
         rlm_couchbase_authorize,    /* authorization */
-        rlm_couchbase_preacct,      /* preaccounting */
+        NULL,                       /* preaccounting */
         rlm_couchbase_accounting,   /* accounting */
         NULL,                       /* checksimul */
         NULL,                       /* pre-proxy */

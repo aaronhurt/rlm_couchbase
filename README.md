@@ -1,11 +1,8 @@
 rlm_couchbase
 =============
 
-Stores radius accounting data directly into couchbase. You can use any radius attribute as a document key.  The default will try to use Acct-Unique-Session-Id
-and fallback to Acct-Session-Id if Acct-Unique-Session-Id is not present (needs acct_unique policy in preacct to generate the unique id).
-Different status types (start/stop/update) are merged into a single document for easy view writing.  To generate the calledStationSSID fields you will need to
-use the rewrite_called_station_id policy in the preacct section of your config.  The couchbase module will attempt to produce the Stripped-User-Name and
-Stripped-Domain-Name attributes if used in the preacct section.
+Stores radius accounting data directly into couchbase. You can use any radius attribute as a document key. The default will try to use Acct-Unique-Session-Id and fallback to Acct-Session-Id if Acct-Unique-Session-Id is not present (needs acct_unique policy in preacct to generate the unique id).
+Different status types (start/stop/update) are merged into a single document for easy view writing.  To generate the calledStationSSID fields you will need to use the rewrite_called_station_id policy in the preacct section of your config.
 
 Example from an Aerohive Wireless Access Point:
 
@@ -39,7 +36,7 @@ Example from an Aerohive Wireless Access Point:
       "strippedUserDomain": "blargs.com"
     }
 
-The module is also capable of authorizing users via documents stored in couchbase.  The document keys should be deterministic based on information available in the document.  The format of those keys may be specified in unlang like the example below:
+The module is also capable of authorizing users via documents stored in couchbase. The document keys should be deterministic based on information available in the document. The format of those keys may be specified in unlang like the example below:
 
     userkey = "raduser_%{md5:%{tolower:%{User-Name}}}"
 
@@ -66,7 +63,10 @@ To Use
 ------
 
 Pull freeradius-server master and clone this module under src/modules.  Then enable and compile as usual.
-You will need [libcouchbase](https://github.com/couchbase/libcouchbase) >= 2.0 installed with a valid libio module.  You will also need [json-c](https://github.com/json-c/json-c) >= 0.11 installed and available.
+You will also need the following libraries:
+
+* [libcouchbase](https://github.com/couchbase/libcouchbase) >= 2.0 with a valid libio module
+* [json-c](https://github.com/json-c/json-c) >= 0.11
 
 Configuration
 -------------
@@ -191,10 +191,10 @@ Notes
 -----
 
 This module was tested to handle thousands of radius requests in a short period of time from several thousand Aerohive Access Points pointing
-to a FreeRADIUS installation for accounting and authorization.  You should list the couchbase module in both the accounting, preacct and authorization sections
-of your site configuration if you are planning to use it for both purposes.
+to a FreeRADIUS installation for accounting and authorization.  You should list the couchbase module in both the accounting and authorization
+sections of your site configuration if you are planning to use it for both purposes.
 You should also have PAP enabled for authenticating users based on cleartext or hashed password attributes.
 As always YMMV.
 
-This module was built and tested against the latest [FreeRADIUS v3.0.x branch](https://github.com/FreeRADIUS/freeradius-server/tree/v3.0.x) as of the most
-current commit to this repository.
+This module was built and tested against the latest [FreeRADIUS v3.0.x branch](https://github.com/FreeRADIUS/freeradius-server/tree/v3.0.x)
+as of the most current commit to this repository.
