@@ -58,7 +58,8 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     for (ci = cf_item_find_next(cs, NULL); ci != NULL; ci = cf_item_find_next(cs, ci)) {
         /* validate item */
         if (!cf_item_is_pair(ci)) {
-            DEBUG("rlm_couchbase: invalid item in 'map' section");
+            DEBUG("rlm_couchbase: failed to parse invalid item in 'map' section");
+            /* fail */
             return -1;
         }
 
