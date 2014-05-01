@@ -79,28 +79,40 @@ int mod_conn_delete(UNUSED void *instance, void *handle) {
 }
 
 /* map free radius attribute to user defined json element name */
-int mod_attribute_to_element(const char *name, json_object *map, void *buf) {
-    json_object *jval;  /* json object values */
+int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
+    CONF_ITEM *ci;                      /* config item */
+    CONF_PAIR *cp;                      /* config pair */
+    const char *attribute, *value;      /* config pair attibute and value */
+    int length;                         /* attribute value length */
 
     /* clear buffer */
     memset((char *) buf, 0, MAX_KEY_SIZE);
 
-    /* attempt to map attribute */
-    if (json_object_object_get_ex(map, name, &jval)) {
-        int length;     /* json value length */
-        /* get value length */
-        length = json_object_get_string_len(jval);
-        /* check buffer size */
-        if (length > MAX_KEY_SIZE -1) {
-            /* oops ... this value is bigger than our buffer ... error out */
-            ERROR("rlm_couchbase: json map value larger than MAX_KEY_SIZE - %d", MAX_KEY_SIZE);
-            /* return fail */
-            return -1;
-        } else {
-            /* copy string value to buffer */
-            strncpy(buf, json_object_get_string(jval), length);
-            /* return good */
-            return 0;
+    /* find pair */
+    cp = cf_pair_find(inst->map, name)
+
+    /* check pair and map attribute */
+    if (cp) {
+        /* get pair attribute name */
+        attribute = cf_pair_attr(cp);
+        /* get pair value */
+        value = cf_pair_value(cp);
+        /* sanity check */
+        if (attribute && value && (strcmp(attribute, name) == 0)) {
+            /* get length */
+            int length = strlen(value);
+            /* check buffer size */
+            if (length > MAX_KEY_SIZE -1) {
+                /* oops ... this value is bigger than our buffer ... error out */
+                ERROR("rlm_couchbase: map value larger than MAX_KEY_SIZE - %d", MAX_KEY_SIZE);
+                /* return fail */
+                return -1;
+            } else {
+                /* copy pair value to buffer */
+                strlcpy(buf, value, length);
+                /* return good */
+                return 0;
+            }
         }
     }
 

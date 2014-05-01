@@ -22,7 +22,7 @@ typedef struct rlm_couchbase_t {
     const char *pass;               /* couchbase bucket password */
     unsigned int expire;            /* document expire time in seconds */
     const char *userkey;            /* user document key */
-    json_object *map;               /* json object to hold user defined attribute map */
+    CONF_SECTION *map;              /* json object to hold user defined attribute map */
     fr_connection_pool_t *pool;     /* connection pool */
 } rlm_couchbase_t;
 
@@ -39,7 +39,7 @@ int mod_conn_alive(UNUSED void *instance, void *handle);
 
 int mod_conn_delete(UNUSED void *instance, void *handle);
 
-int mod_attribute_to_element(const char *name, json_object *map, void *attribute);
+int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *attribute);
 
 void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQUEST *request);
 
