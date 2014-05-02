@@ -61,9 +61,11 @@ When everything is configured correctly you will see accounting requests recorde
       "strippedUserDomain": "blargs.com"
     }
 
-The authorization funcionality relies on documents with deterministic based on information available from the authorization request. The format of those keys may be specified in unlang like the example below which creates an md5 hash of the lowercase 'User-Name' attribute.
+The authorization funcionality relies on documents with deterministic based on information available from the authorization request. The format of those keys may be specified in unlang like the example below:
 
-    userkey = "raduser_%{md5:%{tolower:%{User-Name}}}"
+    userkey = "raduser_%{md5:%{tolower:%{%{Stripped-User-Name}:-%{User-Name}}}}"
+
+This will create an md5 hash of the lowercase 'Stripped-User-Name' attribute or the 'User-Name' attribute if 'Stripped-User-Name' doesn't exist. The module will then attempt to fetch the resulting key from the configured couchbase bucket.
 
 The document structure is straight forward and flexible:
 
