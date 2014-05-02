@@ -1,5 +1,8 @@
 /* workarounds missing functions in old json-c libraries */
 
+#ifndef _jsonc_missing_h_
+#define _jsonc_missing_h_
+
 RCSIDH(jsonc_missing_h, "$Id$");
 
 #include <json/json.h>
@@ -32,4 +35,6 @@ const char *json_tokener_error_desc(enum json_tokener_error jerr);
 
 #ifndef HAVE_JSON_TOKENER_GET_ERROR
 enum json_tokener_error json_tokener_get_error(json_tokener *tok);
+#endif
+
 #endif

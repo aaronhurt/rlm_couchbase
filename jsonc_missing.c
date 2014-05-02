@@ -2,6 +2,8 @@
 
 RCSID("$Id$");
 
+#include <string.h>
+
 #include "jsonc_missing.h"
 
 #ifndef HAVE_JSON_OBJECT_GET_STRING_LEN
