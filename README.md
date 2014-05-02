@@ -108,18 +108,19 @@ To Use
 Pull freeradius-server master and clone this module under src/modules.  Then enable and compile as usual.
 You will also need the following libraries:
 
-* [libcouchbase](https://github.com/couchbase/libcouchbase) >= 2.0 with a valid libio module
-* [json-c](https://github.com/json-c/json-c) >= 0.10
+* [libcouchbase](https://github.com/couchbase/libcouchbase) >= 2.0.0 with a valid libio module
+* [json-c](https://github.com/json-c/json-c) >= 0.9 (0.10+ HIGHLY encouraged)
 
 Configuration
 -------------
 
     couchbase {
         #
-        # List of Couchbase hosts semi-colon separated.  Ports are optional if servers
-        # are listening on the standard port.  Complete pool urls are preferred.
+        # List of Couchbase hosts (hosts may be space, tab, comma or semi-colon separated).
+        # Ports are optional if servers are listening on the standard port.
+        # Complete pool urls are preferred.
         #
-        server = "http://cb01.blargs.com:8091/pools/;http://cb04.blargs.com:8091/pools/"
+        server = "http://cb01.blargs.com:8091/pools/ http://cb04.blargs.com:8091/pools/"
 
         # Couchbase bucket name
         bucket = "radius"
