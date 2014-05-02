@@ -1,10 +1,35 @@
 rlm_couchbase
 =============
 
-Stores radius accounting data directly into couchbase. You can use any radius attribute as a document key. The default will try to use Acct-Unique-Session-Id and fallback to Acct-Session-Id if Acct-Unique-Session-Id is not present (needs acct_unique policy in preacct to generate the unique id).
-Different status types (start/stop/update) are merged into a single document for easy view writing.  To generate the calledStationSSID fields you will need to use the rewrite_called_station_id policy in the preacct section of your config.
+Stores radius accounting data directly into Couchbase and allows you to authorize users from documents created in Couchbase.. You can use any radius attribute as a document key. The default will try to use Acct-Unique-Session-Id and fallback to Acct-Session-Id if Acct-Unique-Session-Id is not present (needs acct_unique policy in preacct to generate the unique id).
+Different status types (start/stop/update) are merged into a single document for easy view writing.  To generate the calledStationSSID fields you will need to use the rewrite_called_station_id policy in the preacct section of your config.  Similarly to get the 'Stripped-User-Name' and 'Stripped-User-Domain' I create a file in ```raddb/policy.d/``` with the following content:
 
-Example from an Aerohive Wireless Access Point:
+    ## nt domain regex
+    simple_nt_regexp = "^([^\\\\\\\\]*)(\\\\\\\\(.*))$"
+
+    ## simple nai regex
+    simple_nai_regexp = "^([^@]*)(@(.*))$"
+
+    ## split user@domain and domain\user formats
+    strip_user_domain {
+      if(User-Name && (User-Name =~ /${policy.simple_nt_regexp}/)){
+        update request {
+          Stripped-User-Domain = "%{1}"
+          Stripped-User-Name = "%{3}"
+        }
+      }
+      elsif(User-Name && (User-Name =~ /${policy.simple_nai_regexp}/)){
+        update request {
+          Stripped-User-Name = "%{1}"
+          Stripped-User-Domain = "%{3}"
+        }
+      }
+      else {
+        noop
+      }
+    }
+
+When everything is configured correctly you will see accounting requests recorded as JSON documents in your Couchbaase cluster.  The example below comes from an Aerohive wireless access point.
 
     {
       "docType": "radacct",
@@ -36,7 +61,7 @@ Example from an Aerohive Wireless Access Point:
       "strippedUserDomain": "blargs.com"
     }
 
-The module is also capable of authorizing users via documents stored in couchbase. The document keys should be deterministic based on information available in the document. The format of those keys may be specified in unlang like the example below:
+The authorization funcionality relies on documents with deterministic based on information available from the authorization request. The format of those keys may be specified in unlang like the example below which creates an md5 hash of the lowercase 'User-Name' attribute.
 
     userkey = "raduser_%{md5:%{tolower:%{User-Name}}}"
 
@@ -66,7 +91,7 @@ Pull freeradius-server master and clone this module under src/modules.  Then ena
 You will also need the following libraries:
 
 * [libcouchbase](https://github.com/couchbase/libcouchbase) >= 2.0 with a valid libio module
-* [json-c](https://github.com/json-c/json-c) >= 0.11
+* [json-c](https://github.com/json-c/json-c) >= 0.10
 
 Configuration
 -------------
@@ -132,7 +157,7 @@ Configuration
         }
 
         # Couchbase document key for user documents (unlang supported)
-        userkey = "raduser_%{md5:%{tolower:%{User-Name}}}"
+        userkey = "raduser_%{md5:%{tolower:%{%{Stripped-User-Name}:-%{User-Name}}}}"
 
         #
         #  The connection pool is new for 3.0, and will be used in many

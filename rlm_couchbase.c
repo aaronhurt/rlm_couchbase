@@ -15,13 +15,15 @@ RCSID("$Id$")
 
 /* map config to internal variables */
 static const CONF_PARSER module_config[] = {
-    {"acctkey", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, acctkey), NULL, "radacct_%{%{Acct-Unique-Session-Id}:-%{Acct-Session-Id}}"},
+    {"acctkey", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, acctkey), NULL,
+        "radacct_%{%{Acct-Unique-Session-Id}:-%{Acct-Session-Id}}"},
     {"doctype", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, doctype), NULL, "radacct"},
     {"server", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, server), NULL, NULL},
     {"bucket", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, bucket), NULL, NULL},
     {"pass", PW_TYPE_STRING_PTR, offsetof(rlm_couchbase_t, pass), NULL, NULL},
     {"expire", PW_TYPE_INTEGER, offsetof(rlm_couchbase_t, expire), NULL, 0},
-    {"userkey", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, userkey), NULL, "raduser_%{md5:%{tolower:%{User-Name}}}"},
+    {"userkey", PW_TYPE_STRING_PTR | PW_TYPE_REQUIRED, offsetof(rlm_couchbase_t, userkey), NULL,
+        "raduser_%{md5:%{tolower:%{%{Stripped-User-Name}:-%{User-Name}}}}"},
     {NULL, -1, 0, NULL, NULL}     /* end the list */
 };
 
@@ -35,6 +37,29 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
         ERROR("rlm_couchbase: failed to parse config");
         /* fail */
         return -1;
+    }
+
+    /* rebuild server list if needed - libcouchbase only takes a semi-colon separated list */
+    if (strchr(inst->server, '\t') || strchr(inst->server, ' ') || strchr(inst->server, ',')) {
+        char *tok;  /* temporary token pointer */
+        /* make a copy of the server string */
+        char *servers = talloc_typed_strdup(inst, inst->server);
+        /* temporary buffer for the new server string */
+        char *temps = talloc_zero_size(inst, strlen(inst->server) + 1);
+        /* loop through server list and break into pieces */
+        while ((tok = strsep(&servers, "\t ,")) != NULL) {
+            /* build server string */
+            if (strlen(tok)) {
+                temps = talloc_asprintf_append(temps, "%s;", tok);
+            }
+        }
+        /* replace old server string with new */
+        strlcpy((char *)inst->server, temps, strlen(temps));
+        /* free temporary buffers */
+        talloc_free(servers);
+        talloc_free(temps);
+        /* debugging */
+        DEBUG("rlm_couchbase: built server string '%s' from config", inst->server);
     }
 
     /* find map section */
@@ -65,24 +90,16 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
 static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     rlm_couchbase_t *inst = instance;       /* our module instance */
     void *handle = NULL;                    /* connection pool handle */
-    VALUE_PAIR *vp;                         /* value pair pointer */
     char dockey[MAX_KEY_SIZE];              /* our document key */
-    const char *uname = NULL;               /* username pointer */
     lcb_error_t cb_error = LCB_SUCCESS;     /* couchbase error holder */
 
     /* assert packet as not null */
     rad_assert(request->packet != NULL);
 
-    /* prefer stripped user name */
-    if ((vp = pairfind(request->packet->vps, PW_STRIPPED_USER_NAME, 0, TAG_ANY)) != NULL) {
-        uname = vp->vp_strvalue;
-    /* fallback to user-name */
-    } else if ((vp = pairfind(request->packet->vps, PW_USER_NAME, 0, TAG_ANY)) != NULL) {
-        uname = vp->vp_strvalue;
-    /* fail */
-    } else {
-        /* log debug */
-        RDEBUG("rlm_couchbase: failed to find valid username for authorization");
+    /* attempt to build document key */
+    if (radius_xlat(dockey, sizeof(dockey), request, inst->userkey, NULL, NULL) < 0) {
+        /* log error */
+        RERROR("rlm_couchbase: could not find user key attribute (%s) in packet", inst->userkey);
         /* return */
         return RLM_MODULE_FAIL;
     }
@@ -111,16 +128,6 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
         fr_connection_release(inst->pool, handle);
         /* log error */
         RERROR("rlm_couchbase: could not zero cookie");
-        /* return */
-        return RLM_MODULE_FAIL;
-    }
-
-    /* attempt to build document key */
-    if (radius_xlat(dockey, sizeof(dockey), request, inst->userkey, NULL, NULL) < 0) {
-        /* log error */
-        RERROR("rlm_couchbase: could not find user key attribute (%s) in packet", inst->userkey);
-        /* release handle */
-        fr_connection_release(inst->pool, handle);
         /* return */
         return RLM_MODULE_FAIL;
     }
