@@ -1,14 +1,11 @@
 /* junk */
+
 RCSID("$Id$")
 
 #include <freeradius-devel/radiusd.h>
 #include <freeradius-devel/libradius.h>
 #include <freeradius-devel/modules.h>
 #include <freeradius-devel/rad_assert.h>
-
-#include <libcouchbase/couchbase.h>
-
-#include <json/json.h>
 
 #include "mod.h"
 #include "couchbase.h"
@@ -249,7 +246,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         /* log error */
         RERROR("rlm_couchbase: failed to execute get request or parse returned json object");
         /* free json object */
-        json_object_put(cookie->jobj); 
+        json_object_put(cookie->jobj);
     } else {
         /* check cookie json object */
         if (cookie->jobj != NULL) {
