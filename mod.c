@@ -83,7 +83,7 @@ int mod_conn_delete(UNUSED void *instance, void *handle) {
 /* map free radius attribute to user defined json element name */
 int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
     CONF_PAIR *cp;                      /* config pair */
-    const char *attribute, *value;      /* config pair attibute and value */
+    const char *attribute, *element;    /* attribute and element names */
     int length;                         /* attribute value length */
 
     /* clear buffer */
@@ -96,12 +96,12 @@ int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
     if (cp) {
         /* get pair attribute name */
         attribute = cf_pair_attr(cp);
-        /* get pair value */
-        value = cf_pair_value(cp);
-        /* sanity check */
-        if (attribute && value && (strcmp(attribute, name) == 0)) {
+        /* get the element name (attribute value) */
+        element = cf_pair_value(cp);
+        /* sanity check all variables */
+        if (attribute && element && (strcmp(attribute, name) == 0)) {
             /* get length */
-            length = (strlen(value) + 1);
+            length = (strlen(element) + 1);
             /* check buffer size */
             if (length > MAX_KEY_SIZE -1) {
                 /* oops ... this value is bigger than our buffer ... error out */
@@ -109,8 +109,8 @@ int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
                 /* return fail */
                 return -1;
             } else {
-                /* copy pair value to buffer */
-                strlcpy(buf, value, length);
+                /* copy element name (attribute value) to buffer */
+                strlcpy(buf, element, length);
                 /* return good */
                 return 0;
             }

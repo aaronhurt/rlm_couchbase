@@ -43,22 +43,22 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
     /* rebuild server list if needed - libcouchbase only takes a semi-colon separated list */
     if (strchr(inst->server, '\t') || strchr(inst->server, ' ') || strchr(inst->server, ',')) {
         char *tok;  /* temporary token pointer */
-        /* make a copy of the server string */
-        char *servers = talloc_typed_strdup(inst, inst->server);
+        /* make a temporary copy of the server string */
+        char *temps1 = talloc_typed_strdup(inst, inst->server);
         /* temporary buffer for the new server string */
-        char *temps = talloc_zero_size(inst, strlen(inst->server) + 1);
+        char *temps2 = talloc_zero_size(inst, strlen(inst->server) + 1);
         /* loop through server list and break into pieces */
-        while ((tok = strsep(&servers, "\t ,")) != NULL) {
+        while ((tok = strsep(&temps1, "\t ,")) != NULL) {
             /* build server string */
             if (strlen(tok)) {
-                temps = talloc_asprintf_append(temps, "%s;", tok);
+                temps2 = talloc_asprintf_append(temps2, "%s;", tok);
             }
         }
         /* replace old server string with new */
-        strlcpy((char *)inst->server, temps, strlen(temps));
+        strlcpy(inst->server, temps2, strlen(temps2));
         /* free temporary buffers */
-        talloc_free(servers);
-        talloc_free(temps);
+        talloc_free(temps1);
+        talloc_free(temps2);
         /* debugging */
         DEBUG("rlm_couchbase: built server string '%s' from config", inst->server);
     }

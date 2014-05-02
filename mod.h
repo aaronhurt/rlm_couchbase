@@ -20,7 +20,7 @@ RCSIDH(mod_h, "$Id$");
 typedef struct rlm_couchbase_t {
     const char *acctkey;            /* accounting document key */
     const char *doctype;            /* value of 'docType' element name */
-    const char *server;             /* couchbase server list */
+    char *server;                   /* couchbase server list */
     const char *bucket;             /* couchbase bucket */
     const char *pass;               /* couchbase bucket password */
     unsigned int expire;            /* document expire time in seconds */
