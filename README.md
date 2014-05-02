@@ -1,33 +1,14 @@
 rlm_couchbase
 =============
 
-Stores radius accounting data directly into Couchbase and allows you to authorize users from documents created in Couchbase.. You can use any radius attribute as a document key. The default will try to use Acct-Unique-Session-Id and fallback to Acct-Session-Id if Acct-Unique-Session-Id is not present (needs acct_unique policy in preacct to generate the unique id).
-Different status types (start/stop/update) are merged into a single document for easy view writing.  To generate the calledStationSSID fields you will need to use the rewrite_called_station_id policy in the preacct section of your config.  Similarly to get the 'Stripped-User-Name' and 'Stripped-User-Domain' attributes I create a file in ```raddb/policy.d/``` with the following content:
+General
+-------
 
-    ## nt domain regex
-    simple_nt_regexp = "^([^\\\\\\\\]*)(\\\\\\\\(.*))$"
+This module allows you to store radius accounting data directly into Couchbase and authorize users from documents already stored in Couchbase. You can use any radius attribute as to build document keys. The default key for storing accounting documents will try to use 'Acct-Unique-Session-Id' and fallback to 'Acct-Session-Id' if 'Acct-Unique-Session-Id' is not present.  You will need to have the ```acct_unique``` policy in your ```preacct``` to generate the unique id attribute.
+Different status types (start/stop/update) are merged into a single document to facilitate querying and reporting via views.
 
-    ## simple nai regex
-    simple_nai_regexp = "^([^@]*)(@(.*))$"
-
-    ## split user@domain and domain\user formats
-    strip_user_domain {
-      if(User-Name && (User-Name =~ /${policy.simple_nt_regexp}/)){
-        update request {
-          Stripped-User-Domain = "%{1}"
-          Stripped-User-Name = "%{3}"
-        }
-      }
-      elsif(User-Name && (User-Name =~ /${policy.simple_nai_regexp}/)){
-        update request {
-          Stripped-User-Name = "%{1}"
-          Stripped-User-Domain = "%{3}"
-        }
-      }
-      else {
-        noop
-      }
-    }
+Accounting
+----------
 
 When everything is configured correctly you will see accounting requests recorded as JSON documents in your Couchbaase cluster.  The example below comes from an Aerohive wireless access point.
 
@@ -60,6 +41,38 @@ When everything is configured correctly you will see accounting requests recorde
       "strippedUserName": "mruser",
       "strippedUserDomain": "blargs.com"
     }
+
+To generate the 'calledStationSSID' fields you will need to use the ```rewrite_called_station_id``` policy in the ```preacct``` section of your config.  Similarly to get the 'Stripped-User-Name' and 'Stripped-User-Domain' attributes I create a file in ```raddb/policy.d/``` with the following content:
+
+    ## nt domain regex
+    simple_nt_regexp = "^([^\\\\\\\\]*)(\\\\\\\\(.*))$"
+
+    ## simple nai regex
+    simple_nai_regexp = "^([^@]*)(@(.*))$"
+
+    ## split user@domain and domain\user formats
+    strip_user_domain {
+      if(User-Name && (User-Name =~ /${policy.simple_nt_regexp}/)){
+        update request {
+          Stripped-User-Domain = "%{1}"
+          Stripped-User-Name = "%{3}"
+        }
+      }
+      elsif(User-Name && (User-Name =~ /${policy.simple_nai_regexp}/)){
+        update request {
+          Stripped-User-Name = "%{1}"
+          Stripped-User-Domain = "%{3}"
+        }
+      }
+      else {
+        noop
+      }
+    }
+
+I then reference this policy in both the ```preacct``` and ```authorization``` sections of my configuration before referencing this module.
+
+Authorization
+-------------
 
 The authorization funcionality relies on documents with deterministic based on information available from the authorization request. The format of those keys may be specified in unlang like the example below:
 
