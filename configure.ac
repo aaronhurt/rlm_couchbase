@@ -96,7 +96,22 @@ if test x$with_[]modname != xno; then
 		fi
 	fi
 
-	if test "x$have_json" = "xno"; then
+	if test "x$have_json" = "xyes"; then
+		dnl # Ensure we use the library we just found the rest of the checks
+		LDFLAGS="$SMART_LIBS"
+
+		dnl # Add any optional functions here
+		AC_CHECK_FUNCS(\
+			json_c_version \
+			json_object_get_string_len \
+			lh_table_lookup_ex \
+			json_object_object_get_ex \
+			json_object_new_int64 \
+			json_tokener_parse_verbose \
+			json_tokener_error_desc \
+			json_tokener_get_error
+		)
+	else
 		fail="$fail json-c"
 	fi
 
@@ -174,6 +189,10 @@ if test x$with_[]modname != xno; then
 	then
 		have_couchbase="no"
 		AC_MSG_WARN([libcouchbase libraries not found. Use --with-libcouchbase-lib-dir=<path>.])
+	fi
+
+	if test "x$have_couchbase" != "xyes"; then
+		fail="$fail json-c"
 	fi
 
 	if test "x$have_couchbase" = "xno"; then

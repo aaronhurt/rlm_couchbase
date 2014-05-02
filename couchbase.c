@@ -1,12 +1,14 @@
 /* couchbase */
 
-RCSID("$Id$")
+RCSID("$Id$");
 
 #include <freeradius-devel/radiusd.h>
 
 #include <libcouchbase/couchbase.h>
+#include <json/json.h>
 
 #include "couchbase.h"
+#include "jsonc_missing.h"
 
 /* general couchbase error callback */
 void couchbase_error_callback(lcb_t instance, lcb_error_t error, const char *errinfo) {

@@ -1,10 +1,11 @@
-/* blargs */
+/* module utillity header */
 
 RCSIDH(mod_h, "$Id$");
 
 #include <libcouchbase/couchbase.h>
-
 #include <json/json.h>
+
+#include "jsonc_missing.h"
 
 /* maximum size of a stored value */
 #define MAX_VALUE_SIZE 20480

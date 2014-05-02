@@ -1,12 +1,15 @@
-/* blargs */
+/* additional module utillities */
 
-RCSID("$Id$")
+RCSID("$Id$");
 
 #include <freeradius-devel/radiusd.h>
 
-#include "couchbase.h"
+#include <libcouchbase/couchbase.h>
+#include <json/json.h>
 
 #include "mod.h"
+#include "couchbase.h"
+#include "jsonc_missing.h"
 
 /* create new connection pool handle */
 void *mod_conn_create(void *instance) {
@@ -126,7 +129,7 @@ int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
  */
 void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQUEST *request) {
     json_object *jobj, *jval, *jval2;   /* json object pointers */
-    json_object_iter iter;              /* json object iterator */
+    struct json_object_iter iter;       /* json object iterator */
     TALLOC_CTX *ctx;                    /* talloc context for pairmake */
     VALUE_PAIR *vp, **ptr;              /* value pair and value pair pointer for pairmake */
 
@@ -219,22 +222,40 @@ json_object *mod_value_pair_to_json_object(REQUEST *request, VALUE_PAIR *vp) {
             case PW_TYPE_SHORT:
                 /* skip if we have flags */
                 if (vp->da->flags.has_value) break;
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
                 /* debug */
                 RDEBUG3("creating new int64 for unsigned 32 bit int/byte/short '%s'", vp->da->name);
-                /* return as 64 bit int - json-c does not seem to support unsigned 32 bit ints */
+                /* return as 64 bit int - JSON spec does not support unsigned ints */
                 return json_object_new_int64(vp->vp_integer);
+#else
+                /* debug */
+                RDEBUG3("creating new int for unsigned 32 bit int/byte/short '%s'", vp->da->name);
+                /* return as 64 bit int - JSON spec does not support unsigned ints */
+                return json_object_new_int(vp->vp_integer);
+#endif
             break;
             case PW_TYPE_SIGNED:
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
                 /* debug */
                 RDEBUG3("creating new int64 for signed 32 bit integer '%s'", vp->da->name);
                 /* return as 64 bit int - json-c represents all ints as 64 bits internally */
                 return json_object_new_int64(vp->vp_signed);
+#else
+                RDEBUG3("creating new int for signed 32 bit integer '%s'", vp->da->name);
+                /* return as signed int */
+                return json_object_new_int(vp->vp_signed);
+#endif
             break;
             case PW_TYPE_INTEGER64:
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
                 /* debug */
                 RDEBUG3("creating new int64 for 64 bit integer '%s'", vp->da->name);
                 /* return as 64 bit int - because it is a 64 bit int */
                 return json_object_new_int64(vp->vp_integer64);
+#else
+                /* warning */
+                RWARN("skipping 64 bit integer attribute '%s' - please upgrade json-c to 0.10+", vp->da->name);
+#endif
             break;
             default:
                 /* silence warnings - do nothing */
