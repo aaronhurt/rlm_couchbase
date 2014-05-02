@@ -2,7 +2,7 @@ rlm_couchbase
 =============
 
 Stores radius accounting data directly into Couchbase and allows you to authorize users from documents created in Couchbase.. You can use any radius attribute as a document key. The default will try to use Acct-Unique-Session-Id and fallback to Acct-Session-Id if Acct-Unique-Session-Id is not present (needs acct_unique policy in preacct to generate the unique id).
-Different status types (start/stop/update) are merged into a single document for easy view writing.  To generate the calledStationSSID fields you will need to use the rewrite_called_station_id policy in the preacct section of your config.  Similarly to get the 'Stripped-User-Name' and 'Stripped-User-Domain' I create a file in ```raddb/policy.d/``` with the following content:
+Different status types (start/stop/update) are merged into a single document for easy view writing.  To generate the calledStationSSID fields you will need to use the rewrite_called_station_id policy in the preacct section of your config.  Similarly to get the 'Stripped-User-Name' and 'Stripped-User-Domain' attributes I create a file in ```raddb/policy.d/``` with the following content:
 
     ## nt domain regex
     simple_nt_regexp = "^([^\\\\\\\\]*)(\\\\\\\\(.*))$"
