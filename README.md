@@ -4,13 +4,14 @@ rlm_couchbase
 General
 -------
 
-This module allows you to store radius accounting data directly into Couchbase and authorize users from documents already stored in Couchbase. You can use any radius attribute as to build document keys. The default key for storing accounting documents will try to use 'Acct-Unique-Session-Id' and fallback to 'Acct-Session-Id' if 'Acct-Unique-Session-Id' is not present.  You will need to have the ```acct_unique``` policy in your ```preacct``` to generate the unique id attribute.
-Different status types (start/stop/update) are merged into a single document to facilitate querying and reporting via views.
+This module allows you to store radius accounting data directly into Couchbase and authorize users from documents already stored in Couchbase.  It was tested to handle thousands of radius requests per second from several thousand Aerohive access points using a FreeRADIUS installation with this module for accounting and authorization.  You should list the ```couchbase``` module in both the ```accounting``` and ```authorization``` sections of your site configuration if you are planning to use it for both purposes.  You should also have ```pap``` enabled for authenticating users based on cleartext or hashed password attributes.  As always YMMV.
 
 Accounting
 ----------
 
-When everything is configured correctly you will see accounting requests recorded as JSON documents in your Couchbaase cluster.  The example below comes from an Aerohive wireless access point.
+You can use any radius attribute available in the accounting request to build the key for storing the accounting documents. The default configuration will try to use 'Acct-Unique-Session-Id' and fallback to 'Acct-Session-Id' if 'Acct-Unique-Session-Id' is not present.  You will need to have the ```acct_unique``` policy in the ```preacct``` section of your configuration to generate the unique id attribute.   Different status types (start/stop/update) are merged into a single document to facilitate querying and reporting via views.  When everything is configured correctly you will see accounting requests recorded as JSON documents in your Couchbaase cluster.  You have full control over what attributes are recorded and how those attributes are mapped to JSON element names via the configuration descibed later in this document.
+
+This exmaple is from an Aerohive wireless access point.
 
     {
       "docType": "radacct",
@@ -74,11 +75,11 @@ I then reference this policy in both the ```preacct``` and ```authorization``` s
 Authorization
 -------------
 
-The authorization funcionality relies on documents with deterministic based on information available from the authorization request. The format of those keys may be specified in unlang like the example below:
+The authorization funcionality relies on the user documents being stored with deterministic keys based on information available in the authorization request.  The format of those keys may be specified in unlang like the example below:
 
     userkey = "raduser_%{md5:%{tolower:%{%{Stripped-User-Name}:-%{User-Name}}}}"
 
-This will create an md5 hash of the lowercase 'Stripped-User-Name' attribute or the 'User-Name' attribute if 'Stripped-User-Name' doesn't exist. The module will then attempt to fetch the resulting key from the configured couchbase bucket.
+This will create an md5 hash of the lowercase 'Stripped-User-Name' attribute or the 'User-Name' attribute if 'Stripped-User-Name' doesn't exist.  The module will then attempt to fetch the resulting key from the configured couchbase bucket.
 
 The document structure is straight forward and flexible:
 
@@ -98,6 +99,8 @@ The document structure is straight forward and flexible:
         }
       }
     }
+
+You may specify any valid combination of attributes and operations in the JSON document.
 
 To Use
 ------
@@ -229,12 +232,6 @@ Configuration
 
 Notes
 -----
-
-This module was tested to handle thousands of radius requests in a short period of time from several thousand Aerohive Access Points pointing
-to a FreeRADIUS installation for accounting and authorization.  You should list the couchbase module in both the accounting and authorization
-sections of your site configuration if you are planning to use it for both purposes.
-You should also have PAP enabled for authenticating users based on cleartext or hashed password attributes.
-As always YMMV.
 
 This module was built and tested against the latest [FreeRADIUS v3.0.x branch](https://github.com/FreeRADIUS/freeradius-server/tree/v3.0.x)
 as of the most current commit to this repository.
