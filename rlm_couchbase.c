@@ -160,7 +160,7 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     /* inject config value pairs defined in this json oblect */
     mod_json_object_to_value_pairs(cookie->jobj, "config", request);
 
-    /* inject config value pairs defined in this json oblect */
+    /* inject reply value pairs defined in this json oblect */
     mod_json_object_to_value_pairs(cookie->jobj, "reply", request);
 
     /* return okay */

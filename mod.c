@@ -128,8 +128,7 @@ int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
  * that are defined in the passed json object
  */
 void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQUEST *request) {
-    json_object *jobj, *jval, *jval2;   /* json object pointers */
-    struct json_object_iter iter;       /* json object iterator */
+    json_object *jobj, *jval, *jop;     /* json object pointers */
     TALLOC_CTX *ctx;                    /* talloc context for pairmake */
     VALUE_PAIR *vp, **ptr;              /* value pair and value pair pointer for pairmake */
 
@@ -157,32 +156,32 @@ void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQ
             return NULL;
         }
         /* loop through object */
-        json_object_object_foreachC(jobj, iter) {
-            /* debugging */
-            RDEBUG("parsing '%s' attribute: %s => %s", section, iter.key, json_object_to_json_string(iter.val));
+        json_object_object_foreach(jobj, attribute, json_vp) {
             /* check for appropriate type in value and op */
-            if (!json_object_is_type(iter.val, json_type_object)) {
+            if (!json_object_is_type(json_vp, json_type_object)) {
                 /* log error */
-                RERROR("rlm_couchbase: invalid json type for '%s' attribute - attributes must be json objects", iter.key);
+                RERROR("rlm_couchbase: invalid json type for '%s' attribute - attributes must be json objects", attribute);
                 /* return */
                 return NULL;
             }
+            /* debugging */
+            RDEBUG("parsing '%s' attribute: %s => %s", section, attribute, json_object_to_json_string(json_vp));
             /* create pair from json object */
-            if (json_object_object_get_ex(iter.val, "value", &jval) &&
-                json_object_object_get_ex(iter.val, "op", &jval2)) {
+            if (json_object_object_get_ex(json_vp, "value", &jval) &&
+                json_object_object_get_ex(json_vp, "op", &jop)) {
                 /* make correct pairs based on json object type */
                 switch (json_object_get_type(jval)) {
                     case json_type_double:
                     case json_type_int:
                     case json_type_string:
                         /* debugging */
-                        RDEBUG("adding '%s' attribute to '%s' section", iter.key, section);
+                        RDEBUG("adding '%s' attribute to '%s' section", attribute, section);
                         /* add pair */
-                        vp = pairmake(ctx, ptr, iter.key, json_object_get_string(jval),
-                            fr_str2int(fr_tokens, json_object_get_string(jval2), 0));
+                        vp = pairmake(ctx, ptr, attribute, json_object_get_string(jval),
+                            fr_str2int(fr_tokens, json_object_get_string(jop), 0));
                         /* check pair */
                         if (!vp) {
-                            RERROR("rlm_couchbase: could not build '%s' attribute", fr_strerror());
+                            RERROR("rlm_couchbase: could not build value pair for '%s' attribute (%s)", attribute, fr_strerror());
                             /* return */
                             return NULL;
                         }
@@ -199,7 +198,7 @@ void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQ
                 }
             } else {
                 /* log error */
-                RERROR("rlm_couchbase: failed to get 'value' or 'op' element for '%s' attribute", iter.key);
+                RERROR("rlm_couchbase: failed to get 'value' or 'op' element for '%s' attribute", attribute);
             }
         }
     }
