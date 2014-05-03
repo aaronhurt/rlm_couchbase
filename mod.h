@@ -50,4 +50,4 @@ json_object *mod_value_pair_to_json_object(REQUEST *request, VALUE_PAIR *vp);
 
 int mod_ensure_start_timestamp(json_object *json, VALUE_PAIR *vps);
 
-#endif
+#endif /* _mod_h_ */
