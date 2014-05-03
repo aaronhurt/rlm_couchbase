@@ -21,9 +21,6 @@
 /* Define to 1 if you have the `json_tokener_parse_verbose' function. */
 #undef HAVE_JSON_TOKENER_PARSE_VERBOSE
 
-/* Define to 1 if you have the `lh_table_lookup_ex' function. */
-#undef HAVE_LH_TABLE_LOOKUP_EX
-
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 

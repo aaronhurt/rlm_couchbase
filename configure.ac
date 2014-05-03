@@ -104,7 +104,6 @@ if test x$with_[]modname != xno; then
 		AC_CHECK_FUNCS(\
 			json_c_version \
 			json_object_get_string_len \
-			lh_table_lookup_ex \
 			json_object_object_get_ex \
 			json_object_new_int64 \
 			json_tokener_parse_verbose \

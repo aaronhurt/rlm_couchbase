@@ -141,7 +141,7 @@ void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQ
         ptr = &(request->reply->vps);
     } else {
         /* log error - this shouldn't happen */
-        RERROR("rlm_couchbase: invalid section passed for pairmake");
+        RERROR("invalid section passed for pairmake");
         /* return */
         return NULL;
     }
@@ -151,7 +151,7 @@ void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQ
         /* make sure we have the correct type */
         if (!json_object_is_type(jobj, json_type_object)) {
             /* log error */
-            RERROR("rlm_couchbase: invalid json type for '%s' section - sections must be json objects", section);
+            RERROR("invalid json type for '%s' section - sections must be json objects", section);
             /* reuturn */
             return NULL;
         }
@@ -160,7 +160,7 @@ void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQ
             /* check for appropriate type in value and op */
             if (!json_object_is_type(json_vp, json_type_object)) {
                 /* log error */
-                RERROR("rlm_couchbase: invalid json type for '%s' attribute - attributes must be json objects", attribute);
+                RERROR("invalid json type for '%s' attribute - attributes must be json objects", attribute);
                 /* return */
                 return NULL;
             }
@@ -181,7 +181,7 @@ void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQ
                             fr_str2int(fr_tokens, json_object_get_string(jop), 0));
                         /* check pair */
                         if (!vp) {
-                            RERROR("rlm_couchbase: could not build value pair for '%s' attribute (%s)", attribute, fr_strerror());
+                            RERROR("could not build value pair for '%s' attribute (%s)", attribute, fr_strerror());
                             /* return */
                             return NULL;
                         }
@@ -189,19 +189,24 @@ void *mod_json_object_to_value_pairs(json_object *json, const char *section, REQ
                     case json_type_object:
                     case json_type_array:
                         /* log error - we want to handle these eventually */
-                        RERROR("rlm_couchbase: skipping unhandled nested json object or array value pair object");
+                        RERROR("skipping unhandled nested json object or array value pair object");
                     break;
                     default:
                         /* log error - this shouldn't ever happen */
-                        RERROR("rlm_couchbase: skipping unhandled json type in value pair object");
+                        RERROR("skipping unhandled json type in value pair object");
                     break;
                 }
             } else {
                 /* log error */
-                RERROR("rlm_couchbase: failed to get 'value' or 'op' element for '%s' attribute", attribute);
+                RERROR("failed to get 'value' or 'op' element for '%s' attribute", attribute);
             }
         }
+        /* return NULL */
+        return NULL;
     }
+
+    /* debugging */
+    RDEBUG("couldn't find '%s' section in json object - not adding value pairs for this section", section);
 
     /* return NULL */
     return NULL;

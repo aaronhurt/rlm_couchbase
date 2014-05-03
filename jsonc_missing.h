@@ -21,10 +21,6 @@ RCSIDH(jsonc_missing_h, "$Id$");
     int json_object_object_get_ex(struct json_object* jso, const char *key, struct json_object **value);
 #endif
 
-#ifndef HAVE_LH_TABLE_LOOKUP_EX
-    int lh_table_lookup_ex(struct lh_table* t, const void *k, void **v);
-#endif
-
 #ifndef HAVE_JSON_TOKENER_PARSE_VERBOSE
     struct json_object* json_tokener_parse_verbose(const char *str, enum json_tokener_error *error);
 #endif

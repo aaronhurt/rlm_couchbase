@@ -13,12 +13,23 @@ int json_object_get_string_len(json_object *obj) {
 #endif
 
 #ifndef HAVE_JSON_OBJECT_OBJECT_GET_EX
-int json_object_object_get_ex(json_object *jso, const char *key, json_object **value) {
-    if (NULL == jso) return 0;
+int json_object_object_get_ex(struct json_object *jso, const char *key, struct json_object **value) {
+    struct json_object *jobj;
+
+    if (value != NULL)
+        *value = NULL;
+
+    if (NULL == jso)
+        return 0;
 
     switch(jso->o_type) {
         case json_type_object:
-            return lh_table_lookup_ex(jso->o.c_object, (void*)key, (void**)value);
+            jobj = json_object_object_get(jso, key);
+            if (jobj != NULL) {
+                *value = jobj;
+                return 1;
+            }
+            return 0;
         break;
         default:
             if (value != NULL) {
@@ -27,18 +38,7 @@ int json_object_object_get_ex(json_object *jso, const char *key, json_object **v
             return 0;
         break;
     }
-}
-#endif
-
-#ifndef HAVE_LH_TABLE_LOOKUP_EX
-int lh_table_lookup_ex(struct lh_table* t, const void* k, void **v) {
-    struct lh_entry *e = lh_table_lookup_entry(t, k);
-    if (e != NULL) {
-        if (v != NULL) *v = (void *)e->v;
-        return 1; /* key found */
-    }
-    if (v != NULL) *v = NULL;
-    return 0; /* key not found */
+    return 0;
 }
 #endif
 
@@ -53,8 +53,8 @@ struct json_object* json_tokener_parse_verbose(const char *str, enum json_tokene
     obj = json_tokener_parse_ex(tok, str, -1);
     *error = tok->err;
     if(tok->err != json_tokener_success) {
-    if (obj != NULL)
-      json_object_put(obj);
+        if (obj != NULL)
+            json_object_put(obj);
         obj = NULL;
     }
 
@@ -63,17 +63,19 @@ struct json_object* json_tokener_parse_verbose(const char *str, enum json_tokene
 }
 #endif
 
-#ifndef HAVE_JSON_TOKENER_ERROR_DESC
-const char *json_tokener_error_desc(enum json_tokener_error jerr) {
-    if (NULL == json_tokener_errors[jerr]) {
-        return "Unknown error, invalid json_tokener_error value passed to json_tokener_error_desc()";
-    }
-    return json_tokener_errors[jerr];
-}
-#endif
-
 #ifndef HAVE_JSON_TOKENER_GET_ERROR
 enum json_tokener_error json_tokener_get_error(json_tokener *tok) {
     return tok->err;
 }
+
+#ifndef HAVE_JSON_TOKENER_ERROR_DESC
+const char *json_tokener_error_desc(enum json_tokener_error jerr) {
+    int jerr_int = (int)jerr;
+    if (json_tokener_errors[jerr_int] == NULL)
+        return "Unknown error, invalid json_tokener_error value passed to json_tokener_error_desc()";
+    return json_tokener_errors[jerr_int];
+}
+
+#endif
+
 #endif
