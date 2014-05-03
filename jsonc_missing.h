@@ -41,17 +41,19 @@ RCSIDH(jsonc_missing_h, "$Id$");
 /* redefine with correct handling of const pointers */
 #if defined(__GNUC__) && !defined(__STRICT_ANSI__)
     #define json_object_object_foreach(obj, key, val) \
-    char *key; struct json_object *val; void const *src; void *dst; \
+    char *key; struct json_object *val; \
+    union ctn_u {const void *cdata; void *data; } ctn; \
     for (struct lh_entry *entry = json_object_get_object(obj)->head; \
-        ({ if (entry) { key = (char *)entry->k; src = entry->v; \
-        memcpy(&dst, &src, sizeof(dst)); val = (struct json_object *) dst; }; entry; }); \
+        ({ if (entry) { key = (char *)entry->k; ctn.cdata = entry->v; \
+        val = (struct json_object *)ctn.data; }; entry; }); \
         entry = entry->next)
 #else /* ANSI C or MSC */
     #define json_object_object_foreach(obj,key,val) \
-    char *key; struct json_object *val; struct lh_entry *entry; void const *src; void *dst; \
+    char *key; struct json_object *val; struct lh_entry *entry; \
+    union ctn_u {const void *cdata; void *data; } ctn; \
     for (entry = json_object_get_object(obj)->head; \
-        (entry ? (key = (char *)entry->k, src = entry->v, memcpy(&dst, &src, sizeof(dst)), \
-        val = (struct json_object *)dst, entry) : 0); entry = entry->next)
+        (entry ? (key = (char *)entry->k, ctn.cdata = entry->v, \
+        val = (struct json_object *)ctn.data, entry) : 0); entry = entry->next)
 #endif /* defined(__GNUC__) && !defined(__STRICT_ANSI__) */
 
 #endif  /* _jsonc_missing_h_ */

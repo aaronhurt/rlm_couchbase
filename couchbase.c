@@ -30,7 +30,9 @@ void couchbase_store_callback(lcb_t instance, const void *cookie, lcb_storage_t 
 
 /* couchbase value get callback */
 void couchbase_get_callback(lcb_t instance, const void *cookie, lcb_error_t error, const lcb_get_resp_t *resp) {
-    cookie_t *c = (cookie_t *) cookie;      /* our cookie struct */
+    cookie_u cu;                            /* union of const and non const pointers */
+    cu.cdata = cookie;                      /* set const union member to cookie passed from couchbase */
+    cookie_t *c = (cookie_t *) cu.data;     /* set our cookie struct using non-const member */
     const char *bytes = resp->v.v0.bytes;   /* the payload of this chunk */
     lcb_size_t nbytes = resp->v.v0.nbytes;  /* length of this data chunk */
 
@@ -68,7 +70,9 @@ void couchbase_get_callback(lcb_t instance, const void *cookie, lcb_error_t erro
 
 /* couchbase http callback for data chunks */
 void couchbase_http_data_callback(lcb_http_request_t request, lcb_t instance, const void *cookie, lcb_error_t error, const lcb_http_resp_t *resp) {
-    cookie_t *c = (cookie_t *) cookie;      /* our cookie struct */
+    cookie_u cu;                            /* union of const and non const pointers */
+    cu.cdata = cookie;                      /* set const union member to cookie passed from couchbase */
+    cookie_t *c = (cookie_t *) cu.data;     /* set our cookie struct using non-const member */
     const char *bytes = resp->v.v0.bytes;   /* the payload of this chunk */
     lcb_size_t nbytes = resp->v.v0.nbytes;  /* length of this data chunk */
 

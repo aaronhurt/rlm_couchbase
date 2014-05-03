@@ -9,11 +9,17 @@ RCSIDH(couchbase_h, "$Id$");
 #include <json/json.h>
 
 /* struct to hold cookie data for couchbase callbacks */
-typedef struct {
+typedef struct cookie_t {
     json_object *jobj;              /* json object */
     json_tokener *jtok;             /* json tokener */
     enum json_tokener_error jerr;   /* tokener error */
 } cookie_t;
+
+/* union of const and non const pointers */
+typedef union cookie_u {
+    const void *cdata;
+    void *data;
+} cookie_u;
 
 /* general error callback */
 void couchbase_error_callback(lcb_t instance, lcb_error_t error, const char *errinfo);
