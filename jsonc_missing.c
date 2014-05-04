@@ -67,6 +67,7 @@ struct json_object* json_tokener_parse_verbose(const char *str, enum json_tokene
 enum json_tokener_error json_tokener_get_error(json_tokener *tok) {
     return tok->err;
 }
+#endif
 
 #ifndef HAVE_JSON_TOKENER_ERROR_DESC
 const char *json_tokener_error_desc(enum json_tokener_error jerr) {
@@ -75,7 +76,4 @@ const char *json_tokener_error_desc(enum json_tokener_error jerr) {
         return "Unknown error, invalid json_tokener_error value passed to json_tokener_error_desc()";
     return json_tokener_errors[jerr_int];
 }
-
-#endif
-
 #endif

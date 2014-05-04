@@ -95,7 +95,7 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
     /* attempt to build document key */
     if (radius_xlat(dockey, sizeof(dockey), request, inst->userkey, NULL, NULL) < 0) {
         /* log error */
-        RERROR("rlm_couchbase: could not find user key attribute (%s) in packet", inst->userkey);
+        RERROR("could not find user key attribute (%s) in packet", inst->userkey);
         /* return */
         return RLM_MODULE_FAIL;
     }
@@ -123,7 +123,7 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
         /* free connection */
         fr_connection_release(inst->pool, handle);
         /* log error */
-        RERROR("rlm_couchbase: could not zero cookie");
+        RERROR("could not zero cookie");
         /* return */
         return RLM_MODULE_FAIL;
     }
@@ -180,7 +180,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     /* sanity check */
     if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE, 0, TAG_ANY)) == NULL) {
         /* log debug */
-        RDEBUG("rlm_couchbase: could not find status type in packet");
+        RDEBUG("could not find status type in packet");
         /* return */
         return RLM_MODULE_NOOP;
     }
@@ -191,7 +191,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     /* acknowledge the request but take no action */
     if (status == PW_STATUS_ACCOUNTING_ON || status == PW_STATUS_ACCOUNTING_OFF) {
         /* log debug */
-        RDEBUG("rlm_couchbase: handling accounting on/off request without action");
+        RDEBUG("handling accounting on/off request without action");
         /* return */
         return RLM_MODULE_OK;
     }
@@ -219,7 +219,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         /* free connection */
         fr_connection_release(inst->pool, handle);
         /* log error */
-        RERROR("rlm_couchbase: could not zero cookie");
+        RERROR("could not zero cookie");
         /* return */
         return RLM_MODULE_FAIL;
     }
@@ -227,7 +227,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     /* attempt to build document key */
     if (radius_xlat(dockey, sizeof(dockey), request, inst->acctkey, NULL, NULL) < 0) {
         /* log error */
-        RERROR("rlm_couchbase: could not find accounting key attribute (%s) in packet", inst->acctkey);
+        RERROR("could not find accounting key attribute (%s) in packet", inst->acctkey);
         /* release handle */
         fr_connection_release(inst->pool, handle);
         /* return */
@@ -243,7 +243,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     /* check error */
     if (cb_error != LCB_SUCCESS || cookie->jerr != json_tokener_success) {
         /* log error */
-        RERROR("rlm_couchbase: failed to execute get request or parse returned json object");
+        RERROR("failed to execute get request or parse returned json object");
         /* free json object */
         json_object_put(cookie->jobj);
     } else {
@@ -314,7 +314,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     /* make sure we have enough room in our document buffer */
     if ((unsigned int) json_object_get_string_len(cookie->jobj) > sizeof(document) - 1) {
         /* this isn't good */
-        RERROR("rlm_couchbase: could not write json document - insufficient buffer space");
+        RERROR("could not write json document - insufficient buffer space");
         /* free json output */
         json_object_put(cookie->jobj);
         /* release handle */
@@ -336,7 +336,7 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
 
     /* check return */
     if (cb_error != LCB_SUCCESS) {
-        RERROR("rlm_couchbase: failed to store document (%s): %s (0x%x)", dockey, lcb_strerror(NULL, cb_error), cb_error);
+        RERROR("failed to store document (%s): %s (0x%x)", dockey, lcb_strerror(NULL, cb_error), cb_error);
     }
 
     /* release handle */
