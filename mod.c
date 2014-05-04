@@ -80,40 +80,86 @@ int mod_conn_delete(UNUSED void *instance, void *handle) {
     return true;
 }
 
-/* map free radius attribute to user defined json element name */
-int mod_attribute_to_element(const char *name, CONF_SECTION *map, void *buf) {
-    CONF_PAIR *cp;                      /* config pair */
+/* build json object for mapping radius attributes to json elements */
+int mod_build_attribute_element_map(CONF_SECTION *conf, void *instance) {
+    rlm_couchbase_t *inst = instance;   /* our module instance */
+    CONF_SECTION *cs;                   /* module config section */
+    CONF_ITEM *ci;                      /* config item */
+    CONF_PAIR *cp;                      /* conig pair */
     const char *attribute, *element;    /* attribute and element names */
-    int length;                         /* attribute value length */
+
+    /* find map section */
+    cs = cf_section_sub_find(conf, "map");
+
+    /* check section */
+    if (!cs) {
+        ERROR("rlm_couchbase: failed to find 'map' section in config");
+        /* fail */
+        return -1;
+    }
+
+    /* create attribute map object */
+    inst->map = json_object_new_object();
+
+    /* parse update section */
+    for (ci = cf_item_find_next(cs, NULL); ci != NULL; ci = cf_item_find_next(cs, ci)) {
+        /* validate item */
+        if (!cf_item_is_pair(ci)) {
+            ERROR("rlm_couchbase: failed to parse invalid item in 'map' section");
+            /* free map */
+            if (inst->map) {
+                json_object_put(inst->map);
+            }
+            /* fail */
+            return -1;
+        }
+
+        /* get value pair from item */
+        cp = cf_itemtopair(ci);
+
+        /* get pair name (element name) */
+        element = cf_pair_attr(cp);
+
+        /* get pair value (attribute name) */
+        attribute = cf_pair_value(cp);
+
+        /* add pair name and value */
+        json_object_object_add(inst->map, attribute, json_object_new_string(element));
+
+        /* debugging */
+        DEBUG("rlm_couchbase: added attribute '%s' to element '%s' map to object", attribute, element);
+    }
+
+    /* debugging */
+    DEBUG("rlm_couchbase: built attribute to element map %s", json_object_to_json_string(inst->map));
+
+    /* return */
+    return 0;
+}
+
+/* map free radius attribute to user defined json element name */
+int mod_attribute_to_element(const char *name, json_object *map, void *buf) {
+    json_object *jval;  /* json object values */
 
     /* clear buffer */
     memset((char *) buf, 0, MAX_KEY_SIZE);
 
-    /* find pair */
-    cp = cf_pair_find(map, name);
-
-    /* check pair and map attribute */
-    if (cp) {
-        /* get pair attribute name */
-        attribute = cf_pair_attr(cp);
-        /* get the element name (attribute value) */
-        element = cf_pair_value(cp);
-        /* sanity check all variables */
-        if (attribute && element && (strcmp(attribute, name) == 0)) {
-            /* get length */
-            length = (strlen(element) + 1);
-            /* check buffer size */
-            if (length > MAX_KEY_SIZE -1) {
-                /* oops ... this value is bigger than our buffer ... error out */
-                ERROR("rlm_couchbase: map value larger than MAX_KEY_SIZE - %d", MAX_KEY_SIZE);
-                /* return fail */
-                return -1;
-            } else {
-                /* copy element name (attribute value) to buffer */
-                strlcpy(buf, element, length);
-                /* return good */
-                return 0;
-            }
+    /* attempt to map attribute */
+    if (json_object_object_get_ex(map, name, &jval)) {
+        int length;     /* json value length */
+        /* get value length */
+        length = json_object_get_string_len(jval);
+        /* check buffer size */
+        if (length > MAX_KEY_SIZE -1) {
+            /* oops ... this value is bigger than our buffer ... error out */
+            ERROR("rlm_couchbase: json map value larger than MAX_KEY_SIZE - %d", MAX_KEY_SIZE);
+            /* return fail */
+            return -1;
+        } else {
+            /* copy string value to buffer */
+            strncpy(buf, json_object_get_string(jval), length);
+            /* return good */
+            return 0;
         }
     }
 

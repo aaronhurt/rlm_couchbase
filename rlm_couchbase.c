@@ -30,8 +30,7 @@ static const CONF_PARSER module_config[] = {
 
 /* initialize couchbase connection */
 static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
-    /* build instance */
-    rlm_couchbase_t *inst = instance;
+    rlm_couchbase_t *inst = instance;   /* our module instance */
 
     /* fail on bad config */
     if (cf_section_parse(conf, inst, module_config) < 0) {
@@ -63,12 +62,8 @@ static int rlm_couchbase_instantiate(CONF_SECTION *conf, void *instance) {
         DEBUG("rlm_couchbase: built server string '%s' from config", inst->server);
     }
 
-    /* find map section */
-    inst->map = cf_section_sub_find(conf, "map");
-
-    /* check section */
-    if (!inst->map) {
-        ERROR("rlm_couchbase: failed to find 'map' section in config");
+    /* setup item map */
+    if (mod_build_attribute_element_map(conf, inst) != 0) {
         /* fail */
         return -1;
     }
@@ -354,6 +349,11 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
 /* free any memory we allocated */
 static int rlm_couchbase_detach(void *instance) {
     rlm_couchbase_t *inst = instance;  /* instance struct */
+
+    /* free json object attribute map */
+    if (inst->map) {
+        json_object_put(inst->map);
+    }
 
     /* destroy connection pool */
     fr_connection_pool_delete(inst->pool);
