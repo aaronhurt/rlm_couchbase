@@ -120,10 +120,12 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
         /* clear cookie */
         memset(cookie, 0, sizeof(cookie_t));
     } else {
-        /* free connection */
-        fr_connection_release(inst->pool, handle);
         /* log error */
-        RERROR("could not zero cookie");
+        RERROR("cookie not usable - possibly not allocated");
+        /* free connection */
+        if (handle) {
+            fr_connection_release(inst->pool, handle);
+        }
         /* return */
         return RLM_MODULE_FAIL;
     }
@@ -139,15 +141,16 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
         /* log error */
         RERROR("failed to fetch document or parse return");
         /* free json object */
-        json_object_put(cookie->jobj);
+        if (cookie->jobj) {
+            json_object_put(cookie->jobj);
+        }
         /* release handle */
-        fr_connection_release(inst->pool, handle);
+        if (handle) {
+            fr_connection_release(inst->pool, handle);
+        }
         /* return */
         return RLM_MODULE_FAIL;
     }
-
-    /* release handle */
-    fr_connection_release(inst->pool, handle);
 
     /* debugging */
     RDEBUG("parsed user document == %s", json_object_to_json_string(cookie->jobj));
@@ -157,6 +160,16 @@ static rlm_rcode_t rlm_couchbase_authorize(void *instance, REQUEST *request) {
 
     /* inject reply value pairs defined in this json oblect */
     mod_json_object_to_value_pairs(cookie->jobj, "reply", request);
+
+    /* free json object */
+    if (cookie->jobj) {
+        json_object_put(cookie->jobj);
+    }
+
+    /* release handle */
+    if (handle) {
+        fr_connection_release(inst->pool, handle);
+    }
 
     /* return okay */
     return RLM_MODULE_OK;
@@ -216,10 +229,12 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         /* clear cookie */
         memset(cookie, 0, sizeof(cookie_t));
     } else {
-        /* free connection */
-        fr_connection_release(inst->pool, handle);
         /* log error */
-        RERROR("could not zero cookie");
+        RERROR("cookie not usable - possibly not allocated");
+        /* free connection */
+        if (handle) {
+            fr_connection_release(inst->pool, handle);
+        }
         /* return */
         return RLM_MODULE_FAIL;
     }
@@ -229,7 +244,9 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         /* log error */
         RERROR("could not find accounting key attribute (%s) in packet", inst->acctkey);
         /* release handle */
-        fr_connection_release(inst->pool, handle);
+        if (handle) {
+            fr_connection_release(inst->pool, handle);
+        }
         /* return */
         return RLM_MODULE_NOOP;
     }
@@ -245,7 +262,9 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         /* log error */
         RERROR("failed to execute get request or parse returned json object");
         /* free json object */
-        json_object_put(cookie->jobj);
+        if (cookie->jobj) {
+            json_object_put(cookie->jobj);
+        }
     } else {
         /* check cookie json object */
         if (cookie->jobj != NULL) {
@@ -292,9 +311,13 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         break;
         default:
             /* we shouldn't get here - free json object */
-            json_object_put(cookie->jobj);
+            if (cookie->jobj) {
+                json_object_put(cookie->jobj);
+            }
             /* release our connection handle */
-            fr_connection_release(inst->pool, handle);
+            if (handle) {
+                fr_connection_release(inst->pool, handle);
+            }
             /* return without doing anything */
             return RLM_MODULE_NOOP;
         break;
@@ -316,16 +339,22 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
         /* this isn't good */
         RERROR("could not write json document - insufficient buffer space");
         /* free json output */
-        json_object_put(cookie->jobj);
+        if (cookie->jobj) {
+            json_object_put(cookie->jobj);
+        }
         /* release handle */
-        fr_connection_release(inst->pool, handle);
+        if (handle) {
+            fr_connection_release(inst->pool, handle);
+        }
         /* return */
         return RLM_MODULE_FAIL;
     } else {
         /* copy json string to document */
         strlcpy(document, json_object_to_json_string(cookie->jobj), sizeof(document));
         /* free json output */
-        json_object_put(cookie->jobj);
+        if (cookie->jobj) {
+            json_object_put(cookie->jobj);
+        }
     }
 
     /* debugging */
@@ -340,7 +369,9 @@ static rlm_rcode_t rlm_couchbase_accounting(void *instance, REQUEST *request) {
     }
 
     /* release handle */
-    fr_connection_release(inst->pool, handle);
+    if (handle) {
+        fr_connection_release(inst->pool, handle);
+    }
 
     /* return */
     return RLM_MODULE_OK;
@@ -356,7 +387,9 @@ static int rlm_couchbase_detach(void *instance) {
     }
 
     /* destroy connection pool */
-    fr_connection_pool_delete(inst->pool);
+    if (inst->pool) {
+        fr_connection_pool_delete(inst->pool);
+    }
 
     /* return okay */
     return 0;

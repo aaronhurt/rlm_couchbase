@@ -32,23 +32,13 @@ void couchbase_store_callback(lcb_t instance, const void *cookie, lcb_storage_t 
 void couchbase_get_callback(lcb_t instance, const void *cookie, lcb_error_t error,
     const lcb_get_resp_t *item);
 
-/* query a couchbase view via http */
-void couchbase_http_data_callback(lcb_http_request_t request, lcb_t instance, const void *cookie,
-    lcb_error_t error, const lcb_http_resp_t *resp);
-
 /* create a couchbase instance and connect to the cluster */
 lcb_t couchbase_init_connection(const char *host, const char *bucket, const char *pass);
 
 /* store document/key in couchbase */
 lcb_error_t couchbase_set_key(lcb_t instance, const char *key, const char *document, int expire);
 
-/* touch document and upate expire time */
-lcb_error_t couchbase_touch_key(lcb_t instance, const char *key, lcb_time_t exptime);
-
 /* pull document from couchbase by key */
 lcb_error_t couchbase_get_key(lcb_t instance, const void *cookie, const char *key);
-
-/* query a couchbase view via http */
-lcb_error_t couchbase_query_view(lcb_t instance, const void *cookie, const char *path, const char *post);
 
 #endif /* _couchbase_h_ */
