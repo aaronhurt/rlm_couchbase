@@ -1,6 +1,16 @@
 rlm_couchbase
 =============
 
+DEPRECATED
+----------
+
+This module is no longer maintained in this repository.  It was merged into the FreeRADIUS project on May 05, 2014 and has since been modified upstream.
+
+* [master branch](https://github.com/FreeRADIUS/freeradius-server/commit/bd1f25a61f976ccea3e2223e895a43a794759371)
+* [v3.0.x branch](https://github.com/FreeRADIUS/freeradius-server/commit/c2fd34868a9243171d447efdcc5fdbe72708fd2e)
+
+To continue using this module please fetch the sources directly from the [FreeRADIUS](https://github.com/FreeRADIUS/freeradius-server/) project.
+
 General
 -------
 
